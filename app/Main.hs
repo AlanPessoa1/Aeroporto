@@ -8,7 +8,7 @@ import Menus
 
 main :: IO ()
 main = do
-  -- UTF-8 no Windows
+  -- UTF-8 por ser Windows
   hSetEncoding stdout utf8
   hSetEncoding stderr utf8
 
@@ -19,7 +19,7 @@ main = do
   putStrLn "Até logo!"
 
 
---Sempre rodas os dois antes do stack run para aparecer os acentos nas letras
+--Sempre rodar os dois antes do stack run para aparecer os acentos nas letras
 --chcp 65001
 -- $OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::UTF8
 

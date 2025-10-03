@@ -19,7 +19,7 @@ menuPrincipal sys = do
   opc <- getLine
   case opc of
     "1" -> menuPassageiros sys >>= menuPrincipal
-    "2" -> putStrLn "[Menu] Companhias (em breve)"  >> menuPrincipal sys
+    "2" -> menuCompanhias sys >>= menuPrincipal
     "3" -> putStrLn "[Menu] Voos (em breve)"        >> menuPrincipal sys
     "4" -> putStrLn "[Menu] Reservas (em breve)"     >> menuPrincipal sys
     "5" -> putStrLn "[Menu] Relatorios (em breve)"   >> menuPrincipal sys
@@ -74,3 +74,45 @@ printPass p =
           ++ " | Nome: " ++ nome p
           ++ " | Doc: "  ++ documento p
 
+-- ====== SUBMENU: COMPANHIAS ======
+
+menuCompanhias :: Sistema -> IO Sistema
+menuCompanhias sys = do
+  putStrLn ""
+  putStrLn "---- Companhias ----"
+  putStrLn "1) Cadastrar"
+  putStrLn "2) Listar"
+  putStrLn "3) Voltar"
+  putStr   "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> do
+      sys' <- acaoCadastrarCompanhia sys
+      menuCompanhias sys'
+    "2" -> do
+      acaoListarCompanhias sys
+      menuCompanhias sys
+    "3" -> pure sys
+    _   -> do
+      putStrLn "Opcao invalida."
+      menuCompanhias sys
+
+acaoCadastrarCompanhia :: Sistema -> IO Sistema
+acaoCadastrarCompanhia sys = do
+  putStr   "Nome da Companhia: "
+  nomeInput <- getLine
+  case inserirCompanhiaNome nomeInput sys of
+    Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+    Right sys' -> putStrLn "[OK] Companhia cadastrada." >> pure sys'
+
+acaoListarCompanhias :: Sistema -> IO ()
+acaoListarCompanhias sys = do
+  let cs = listarCompanhias sys
+  if null cs
+     then putStrLn "(vazio)"
+     else mapM_ printComp cs
+
+printComp :: Companhia -> IO ()
+printComp c =
+  putStrLn $ "- ID " ++ show (idCompanhia c)
+          ++ " | Nome: " ++ nomeCompanhia c

@@ -47,7 +47,7 @@ getBinDir, getLibDir, getDynLibDir, getDataDir, getLibexecDir, getSysconfDir :: 
 
 bindir, libdir, dynlibdir, datadir, libexecdir, sysconfdir :: FilePath
 bindir     = "C:\\Users\\janil\\OneDrive\\Documentos\\GitHub\\Aeroporto\\.stack-work\\install\\b8b9969e\\bin"
-libdir     = "C:\\Users\\janil\\OneDrive\\Documentos\\GitHub\\Aeroporto\\.stack-work\\install\\b8b9969e\\lib\\x86_64-windows-ghc-9.10.3-b42a\\aeroporto-0.1.0.0-I04mYExiWIg7FM66DKlaFg-aeroporto"
+libdir     = "C:\\Users\\janil\\OneDrive\\Documentos\\GitHub\\Aeroporto\\.stack-work\\install\\b8b9969e\\lib\\x86_64-windows-ghc-9.10.3-b42a\\aeroporto-0.1.0.0-CX6azQhzQa4w9H3d2nVRO-aeroporto"
 dynlibdir  = "C:\\Users\\janil\\OneDrive\\Documentos\\GitHub\\Aeroporto\\.stack-work\\install\\b8b9969e\\lib\\x86_64-windows-ghc-9.10.3-b42a"
 datadir    = "C:\\Users\\janil\\OneDrive\\Documentos\\GitHub\\Aeroporto\\.stack-work\\install\\b8b9969e\\share\\x86_64-windows-ghc-9.10.3-b42a\\aeroporto-0.1.0.0"
 libexecdir = "C:\\Users\\janil\\OneDrive\\Documentos\\GitHub\\Aeroporto\\.stack-work\\install\\b8b9969e\\libexec\\x86_64-windows-ghc-9.10.3-b42a\\aeroporto-0.1.0.0"
