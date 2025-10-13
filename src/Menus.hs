@@ -20,7 +20,7 @@ menuPrincipal sys = do
   case opc of
     "1" -> menuPassageiros sys >>= menuPrincipal
     "2" -> menuCompanhias sys >>= menuPrincipal
-    "3" -> putStrLn "[Menu] Voos (em breve)"        >> menuPrincipal sys
+    "3" -> menuVoos sys >>= menuPrincipal
     "4" -> putStrLn "[Menu] Reservas (em breve)"     >> menuPrincipal sys
     "5" -> putStrLn "[Menu] Relatorios (em breve)"   >> menuPrincipal sys
     "6" -> putStrLn "Saindo..." >> pure sys
@@ -116,3 +116,64 @@ printComp :: Companhia -> IO ()
 printComp c =
   putStrLn $ "- ID " ++ show (idCompanhia c)
           ++ " | Nome: " ++ nomeCompanhia c
+
+-- ====== SUBMENU: VOOS ======
+
+menuVoos :: Sistema -> IO Sistema
+menuVoos sys = do
+  putStrLn ""
+  putStrLn "---- Voos ----"
+  putStrLn "1) Cadastrar"
+  putStrLn "2) Listar"
+  putStrLn "3) Voltar"
+  putStr   "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> do
+      sys' <- acaoCadastrarVoo sys
+      menuVoos sys'
+    "2" -> do
+      acaoListarVoos sys
+      menuVoos sys
+    "3" -> pure sys
+    _   -> do
+      putStrLn "Opcao invalida."
+      menuVoos sys
+
+acaoCadastrarVoo :: Sistema -> IO Sistema
+acaoCadastrarVoo sys = do
+  putStr   "Origem: "
+  origemInput <- getLine
+  putStr   "Destino: "
+  destinoInput <- getLine
+  putStr   "Horario (ex: 12:30): "
+  horarioInput <- getLine
+  putStr   "ID da Companhia: "
+  compInput <- getLine
+  let maybeCompId = readIntSafe compInput
+  case maybeCompId of
+    Nothing     -> putStrLn "[ERRO] ID da Companhia inválido." >> pure sys
+    Just compId -> case inserirVooDados origemInput destinoInput horarioInput compId sys of
+      Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+      Right sys' -> putStrLn "[OK] Voo cadastrado." >> pure sys'
+
+acaoListarVoos :: Sistema -> IO ()
+acaoListarVoos sys = do
+  let vs = listarVoos sys
+  if null vs
+     then putStrLn "(vazio)"
+     else mapM_ (printVoo sys) vs
+
+printVoo :: Sistema -> Voo -> IO ()
+printVoo sys v = do
+  let compName = maybe "(desconhecida)" nomeCompanhia (buscarCompanhiaPorId (idComp v) sys)
+  putStrLn $ "- ID " ++ show (idVoo v)
+          ++ " | " ++ origem v ++ " -> " ++ destino v
+          ++ " | " ++ horario v
+          ++ " | Companhia: " ++ compName
+
+-- Helper: leitura segura de Int
+readIntSafe :: String -> Maybe Int
+readIntSafe s = case reads s of
+  [(n,"")] -> Just n
+  _        -> Nothing
