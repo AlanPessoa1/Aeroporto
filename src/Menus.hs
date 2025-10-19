@@ -2,6 +2,7 @@ module Menus (menuPrincipal) where
 
 import Tipos
 import Negocio
+import Relatorios
 
 -- ====== MENU PRINCIPAL ======
 
@@ -22,7 +23,7 @@ menuPrincipal sys = do
     "2" -> menuCompanhias sys >>= menuPrincipal
     "3" -> menuVoos sys >>= menuPrincipal
     "4" -> putStrLn "[Menu] Reservas (em breve)"     >> menuPrincipal sys
-    "5" -> putStrLn "[Menu] Relatorios (em breve)"   >> menuPrincipal sys
+    "5" -> menuRelatorios sys >>= menuPrincipal
     "6" -> putStrLn "Saindo..." >> pure sys
     _   -> putStrLn "Opcao invalida." >> menuPrincipal sys
 
@@ -54,10 +55,10 @@ menuPassageiros sys = do
 acaoCadastrarPassageiro :: Sistema -> IO Sistema
 acaoCadastrarPassageiro sys = do
   putStr   "Nome: "
-  nome <- getLine
+  nomeInput <- getLine
   putStr   "Documento: "
   doc  <- getLine
-  case inserirPassageiroDados nome doc sys of
+  case inserirPassageiroDados nomeInput doc sys of
     Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
     Right sys' -> putStrLn "[OK] Passageiro cadastrado." >> pure sys'
 
@@ -177,3 +178,38 @@ readIntSafe :: String -> Maybe Int
 readIntSafe s = case reads s of
   [(n,"")] -> Just n
   _        -> Nothing
+
+-- ====== SUBMENU: RELATORIOS ======
+
+menuRelatorios :: Sistema -> IO Sistema
+menuRelatorios sys = do
+  putStrLn ""
+  putStrLn "---- Relatorios ----"
+  putStrLn "1) Estatisticas Gerais"
+  putStrLn "2) Relatorio de Passageiros"
+  putStrLn "3) Relatorio de Companhias"
+  putStrLn "4) Relatorio de Voos"
+  putStrLn "5) Relatorio de Reservas"
+  putStrLn "6) Voltar"
+  putStr   "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> do
+      imprimirRelatorioEstatisticasGerais sys
+      menuRelatorios sys
+    "2" -> do
+      imprimirRelatorioPassageiros sys
+      menuRelatorios sys
+    "3" -> do
+      imprimirRelatorioCompanhias sys
+      menuRelatorios sys
+    "4" -> do
+      imprimirRelatorioVoos sys
+      menuRelatorios sys
+    "5" -> do
+      imprimirRelatorioReservas sys
+      menuRelatorios sys
+    "6" -> pure sys
+    _   -> do
+      putStrLn "Opcao invalida."
+      menuRelatorios sys
