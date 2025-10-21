@@ -1,1 +1,1 @@
-[Voo {idVoo = 1, origem = "Recife", destino = "S\227o Paulo", horario = "12:30", idComp = 1}]
+[Voo {idVoo = 1, origem = "Recife", destino = "S\227o Paulo", horario = "12:30", idComp = 1},Voo {idVoo = 2, origem = "S\227o Paulo", destino = "Fortaleza", horario = "19:45", idComp = 2}]

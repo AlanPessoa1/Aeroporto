@@ -1,20 +1,22 @@
 ? C:\Users\janil\AppData\Local\Programs\stack\x86_64-windows\ghc-9.10.3\lib\x86_64-windows-ghc-9.10.3\rts-1.0.2\include\ghcversion.h
 : hash: 7038bb968ecc358729edd5d1e72a638409aaf5ea6ab13ce6ec7f253daa3b6529
 C:\Users\janil\OneDrive\Documentos\GitHub\Aeroporto\.stack-work\dist\1a191874\build\aeroporto\autogen\Paths_aeroporto.hs:
-  hash: 7362c5d1b00190152749b6ddd0b2a065ef502e934f1f24e4ccea23855a3ae48f
+  hash: 5bdaed5cdd6e8cfe4c0d5be15620ad9fb9822a12922bb73205b40f69b4c514c8
 C:\Users\janil\OneDrive\Documentos\GitHub\Aeroporto\.stack-work\dist\1a191874\build\aeroporto\autogen\cabal_macros.h:
-  hash: 04fef63b67d1cfabb529f54dd39767ad4933ddec473548b829315d1b7fe075be
+  hash: a400053d84e004f2b12eb214cf3793a9f8978af94f168f8b18986c5ac3e9f611
 C:\Users\janil\OneDrive\Documentos\GitHub\Aeroporto\aeroporto.cabal:
-  hash: 6913ab94377e33467acb105899c7b85559fa5b9b8b4710f391757d8aa7cdd1a8
+  hash: 5bb24280d38544f6edbb860d08f8a66eabfa9860a993669eb079a34ff172927e
 C:\Users\janil\OneDrive\Documentos\GitHub\Aeroporto\app\Main.hs:
   hash: 95f1d31819e53dc2615e7ffdbc1a10de49ece1c2e54c3c3dbbdc91eec8d26c28
 C:\Users\janil\OneDrive\Documentos\GitHub\Aeroporto\package.yaml:
-  hash: 266d2b0e6aff79bb8e51482f45239db77e63eec962a98cc467a64127923b0cb0
+  hash: f75ea9747d6587568f2471bb6b8a214b1a4311ff0c858e5e45476182233d0ae5
 C:\Users\janil\OneDrive\Documentos\GitHub\Aeroporto\src\Menus.hs:
-  hash: dc5c85ba477dbff2bddca318a4e73715c45180bf32b569d3ec411409d7b21e27
+  hash: e60ebdb8d80b2f9ca415e5738e464902d55e038f62ba4de973166ffefce697f6
 C:\Users\janil\OneDrive\Documentos\GitHub\Aeroporto\src\Negocio.hs:
   hash: 5521f4c058aab449add714ee1fd945facc51b8a4858207d9ad4452c413e0f11d
 C:\Users\janil\OneDrive\Documentos\GitHub\Aeroporto\src\Persistencia.hs:
   hash: 515a7683d7f3f12129175a1ae5262b78f22884614c2bc31a973b354a905ef988
+C:\Users\janil\OneDrive\Documentos\GitHub\Aeroporto\src\Relatorios.hs:
+  hash: ec0088f679a785df3ba23d078dae40551ed1b8892c83cc6ebba629709172e215
 C:\Users\janil\OneDrive\Documentos\GitHub\Aeroporto\src\Tipos.hs:
   hash: b200d46f0f45ffe8a53dc42b94991254735e04dec6a85b7f6506d1f65ae1ca40
