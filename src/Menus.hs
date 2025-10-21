@@ -4,11 +4,17 @@ import Tipos
 import Negocio
 import Relatorios
 
+-- ====== UTILIDADES ======
+
+-- | Limpa a tela usando sequências de escape ANSI
+limparTela :: IO ()
+limparTela = putStr "\ESC[2J\ESC[H"
 
 -- ====== MENU PRINCIPAL ======
 
 menuPrincipal :: Sistema -> IO Sistema
 menuPrincipal sys = do
+  limparTela
   putStrLn ""
   putStrLn "========== Aeroporto.hs =========="
   putStrLn "1) Passageiros"
@@ -32,6 +38,7 @@ menuPrincipal sys = do
 
 menuPassageiros :: Sistema -> IO Sistema
 menuPassageiros sys = do
+  limparTela
   putStrLn ""
   putStrLn "---- Passageiros ----"
   putStrLn "1) Cadastrar"
@@ -80,6 +87,7 @@ printPass p =
 
 menuCompanhias :: Sistema -> IO Sistema
 menuCompanhias sys = do
+  limparTela
   putStrLn ""
   putStrLn "---- Companhias ----"
   putStrLn "1) Cadastrar"
@@ -123,11 +131,13 @@ printComp c =
 
 menuVoos :: Sistema -> IO Sistema
 menuVoos sys = do
+  limparTela
   putStrLn ""
   putStrLn "---- Voos ----"
   putStrLn "1) Cadastrar"
   putStrLn "2) Listar"
-  putStrLn "3) Voltar"
+  putStrLn "3) Buscar"
+  putStrLn "4) Voltar"
   putStr   "Escolha: "
   opc <- getLine
   case opc of
@@ -137,7 +147,10 @@ menuVoos sys = do
     "2" -> do
       acaoListarVoos sys
       menuVoos sys
-    "3" -> pure sys
+    "3" -> do
+      menuBuscaVoos sys
+      menuVoos sys
+    "4" -> pure sys
     _   -> do
       putStrLn "Opcao invalida."
       menuVoos sys
@@ -174,6 +187,72 @@ printVoo sys v = do
           ++ " | " ++ horario v
           ++ " | Companhia: " ++ compName
 
+-- ====== SUBMENU: BUSCA DE VOOS ======
+
+menuBuscaVoos :: Sistema -> IO ()
+menuBuscaVoos sys = do
+  limparTela
+  putStrLn ""
+  putStrLn "---- Buscar Voos ----"
+  putStrLn "1) Por Origem"
+  putStrLn "2) Por Destino"
+  putStrLn "3) Por Rota (Origem e Destino)"
+  putStrLn "4) Voltar"
+  putStr   "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> do
+      acaoBuscarVoosPorOrigem sys
+      menuBuscaVoos sys
+    "2" -> do
+      acaoBuscarVoosPorDestino sys
+      menuBuscaVoos sys
+    "3" -> do
+      acaoBuscarVoosPorRota sys
+      menuBuscaVoos sys
+    "4" -> pure ()
+    _   -> do
+      putStrLn "Opcao invalida."
+      menuBuscaVoos sys
+
+acaoBuscarVoosPorOrigem :: Sistema -> IO ()
+acaoBuscarVoosPorOrigem sys = do
+  putStr   "Origem: "
+  origemInput <- getLine
+  let resultados = buscarVoosPorOrigem origemInput sys
+  if null resultados
+    then putStrLn "(nenhum voo encontrado)"
+    else do
+      putStrLn ""
+      putStrLn ("Encontrados " ++ show (length resultados) ++ " voo(s):")
+      mapM_ (printVoo sys) resultados
+
+acaoBuscarVoosPorDestino :: Sistema -> IO ()
+acaoBuscarVoosPorDestino sys = do
+  putStr   "Destino: "
+  destinoInput <- getLine
+  let resultados = buscarVoosPorDestino destinoInput sys
+  if null resultados
+    then putStrLn "(nenhum voo encontrado)"
+    else do
+      putStrLn ""
+      putStrLn ("Encontrados " ++ show (length resultados) ++ " voo(s):")
+      mapM_ (printVoo sys) resultados
+
+acaoBuscarVoosPorRota :: Sistema -> IO ()
+acaoBuscarVoosPorRota sys = do
+  putStr   "Origem: "
+  origemInput <- getLine
+  putStr   "Destino: "
+  destinoInput <- getLine
+  let resultados = buscarVoosPorRota origemInput destinoInput sys
+  if null resultados
+    then putStrLn "(nenhum voo encontrado)"
+    else do
+      putStrLn ""
+      putStrLn ("Encontrados " ++ show (length resultados) ++ " voo(s):")
+      mapM_ (printVoo sys) resultados
+
 -- Helper: leitura segura de Int
 readIntSafe :: String -> Maybe Int
 readIntSafe s = case reads s of
@@ -185,6 +264,7 @@ readIntSafe s = case reads s of
 
 menuReservas :: Sistema -> IO Sistema
 menuReservas sys = do
+  limparTela
   putStrLn ""
   putStrLn "---- Reservas ----"
   putStrLn "1) Criar"
@@ -193,7 +273,8 @@ menuReservas sys = do
   putStrLn "4) Listar todas"
   putStrLn "5) Listar por Passageiro"
   putStrLn "6) Listar por Voo"
-  putStrLn "7) Voltar"
+  putStrLn "7) Listar por Status"
+  putStrLn "8) Voltar"
   putStr   "Escolha: "
   opc <- getLine
   case opc of
@@ -203,7 +284,8 @@ menuReservas sys = do
     "4" -> acaoListarReservas sys >> menuReservas sys
     "5" -> acaoListarReservasPorPassageiro sys >> menuReservas sys
     "6" -> acaoListarReservasPorVoo sys >> menuReservas sys
-    "7" -> pure sys
+    "7" -> menuListarReservasPorStatus sys >> menuReservas sys
+    "8" -> pure sys
     _   -> putStrLn "Opcao invalida." >> menuReservas sys
 
 acaoCriarReserva :: Sistema -> IO Sistema
@@ -266,6 +348,42 @@ acaoListarReservasPorVoo sys = do
       if null rs then putStrLn "(vazio)" else mapM_ (printReserva sys) rs
     _ -> putStrLn "[ERRO] ID inválido."
 
+menuListarReservasPorStatus :: Sistema -> IO ()
+menuListarReservasPorStatus sys = do
+  limparTela
+  putStrLn ""
+  putStrLn "---- Listar por Status ----"
+  putStrLn "1) Pendentes"
+  putStrLn "2) Confirmadas"
+  putStrLn "3) Canceladas"
+  putStrLn "4) Voltar"
+  putStr   "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> do
+      acaoListarReservasPorStatus Pendente sys
+      menuListarReservasPorStatus sys
+    "2" -> do
+      acaoListarReservasPorStatus Confirmada sys
+      menuListarReservasPorStatus sys
+    "3" -> do
+      acaoListarReservasPorStatus Cancelada sys
+      menuListarReservasPorStatus sys
+    "4" -> pure ()
+    _   -> do
+      putStrLn "Opcao invalida."
+      menuListarReservasPorStatus sys
+
+acaoListarReservasPorStatus :: StatusReserva -> Sistema -> IO ()
+acaoListarReservasPorStatus st sys = do
+  let rs = listarReservasPorStatus st sys
+  if null rs
+    then putStrLn "(nenhuma reserva encontrada)"
+    else do
+      putStrLn ""
+      putStrLn ("Encontradas " ++ show (length rs) ++ " reserva(s) com status " ++ show st ++ ":")
+      mapM_ (printReserva sys) rs
+
 printReserva :: Sistema -> Reserva -> IO ()
 printReserva sys r = do
   let pn = maybe "(?)" nome (buscarPassageiroPorId (idPass r) sys)
@@ -279,6 +397,7 @@ printReserva sys r = do
 -- ====== SUBMENU: RELATORIOS ======
 menuRelatorios :: Sistema -> IO Sistema
 menuRelatorios sys = do
+  limparTela
   putStrLn "\n---- Relatórios ----"
   putStrLn "1) Estatísticas gerais"
   putStrLn "2) Passageiros"

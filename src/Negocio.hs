@@ -3,17 +3,20 @@ module Negocio
   , inserirCompanhia, inserirCompanhiaNome, listarCompanhias
   , listarVoos, inserirVoo, inserirVooDados, buscarCompanhiaPorId
   , buscarPassageiroPorId, buscarVooPorId
+  , buscarVoosPorOrigem, buscarVoosPorDestino, buscarVoosPorRota
   , listarReservas
   , criarReserva
   , confirmarReserva
   , cancelarReserva
   , listarReservasPorPassageiro
   , listarReservasPorVoo
+  , listarReservasPorStatus
   ) where
 
 
 import Tipos
-import Data.Char (isSpace)
+import Data.Char (isSpace, toLower)
+import Data.List (isInfixOf)
 
 -- | Remove espaços do início e fim
 -- | Remove espaços em branco no início e no fim de uma string.
@@ -126,7 +129,27 @@ buscarVooPorId vid sys = case filter (\v -> idVoo v == vid) (voos sys) of
   (v:_) -> Just v
   _     -> Nothing
 
+-- ====== BUSCAS DE VOOS ======
 
+-- | Busca voos por origem (comparação case-insensitive e parcial)
+buscarVoosPorOrigem :: String -> Sistema -> [Voo]
+buscarVoosPorOrigem origemBusca sys =
+  let origemLower = map toLower (trim origemBusca)
+  in filter (\v -> origemLower `isInfixOf` map toLower (origem v)) (voos sys)
+
+-- | Busca voos por destino (comparação case-insensitive e parcial)
+buscarVoosPorDestino :: String -> Sistema -> [Voo]
+buscarVoosPorDestino destinoBusca sys =
+  let destinoLower = map toLower (trim destinoBusca)
+  in filter (\v -> destinoLower `isInfixOf` map toLower (destino v)) (voos sys)
+
+-- | Busca voos por origem E destino (comparação case-insensitive e parcial)
+buscarVoosPorRota :: String -> String -> Sistema -> [Voo]
+buscarVoosPorRota origemBusca destinoBusca sys =
+  let origemLower = map toLower (trim origemBusca)
+      destinoLower = map toLower (trim destinoBusca)
+  in filter (\v -> origemLower `isInfixOf` map toLower (origem v) &&
+                   destinoLower `isInfixOf` map toLower (destino v)) (voos sys)
 
 -- ====== RESERVAS ======
 
@@ -143,6 +166,11 @@ listarReservasPorPassageiro pid sys =
 listarReservasPorVoo :: Int -> Sistema -> [Reserva]
 listarReservasPorVoo vid sys =
   filter (\r -> idVooRef r == vid) (reservas sys)
+
+-- | Lista reservas por status específico
+listarReservasPorStatus :: StatusReserva -> Sistema -> [Reserva]
+listarReservasPorStatus st sys =
+  filter (\r -> status r == st) (reservas sys)
 
 -- | Cria uma reserva Pendente para (passageiro, voo)
 -- Regras:
