@@ -1,3 +1,15 @@
+-- Este módulo é o “cérebro” do sistema Aeroporto.
+-- Ele contém toda a lógica funcional relacionada a:
+--   - criação e validação de passageiros, companhias e voos
+--   - buscas (consultas por critérios)
+--   - manipulação de reservas (criar, confirmar, cancelar, listar)
+--
+-- O Menus.hs apenas chama as funções deste módulo — ele não decide
+-- regras de negócio, apenas exibe os resultados. Isso segue o princípio
+-- da separação de responsabilidades (UI ≠ lógica).
+--
+-- Todas as funções são puras, exceto quando retornam `Either String Sistema`,
+-- o que permite indicar erros de validação sem causar exceções.
 module Negocio
   ( inserirPassageiro, inserirPassageiroDados, listarPassageiros, proximoId
   , inserirCompanhia, inserirCompanhiaNome, listarCompanhias
@@ -13,37 +25,57 @@ module Negocio
   , listarReservasPorStatus
   ) where
 
-
 import Tipos
 import Data.Char (isSpace, toLower)
 import Data.List (isInfixOf)
 
--- | Remove espaços do início e fim
+
+-- ===============================================================
+--                   FUNÇÕES GENÉRICAS DE APOIO
+-- ===============================================================
+
 -- | Remove espaços em branco no início e no fim de uma string.
+--   Essa função é útil para limpar entradas do usuário,
+--   evitando erros de validação por espaços desnecessários.
 trim :: String -> String
 trim = f . f
   where f = reverse . dropWhile isSpace
 
--- | Gera próximo ID de uma lista (maior + 1, começa em 1)
---   dado um campo que fornece o ID atual.
--- Se a lista estiver vazia, retorna 1.
--- Caso contrário, retorna (máximo dos IDs + 1).
+
+-- | Calcula o próximo ID para uma nova entidade (genérico).
+--   Recebe uma lista de elementos e uma função que extrai o ID atual.
+--   Retorna o maior ID + 1, ou 1 se a lista estiver vazia.
+--
+--   Exemplo:
+--     proximoId [Passageiro 1 "A" "123", Passageiro 2 "B" "456"] idPassageiro
+--     → 3
+--
+--   Essa abordagem garante unicidade dos identificadores sem depender
+--   de estado global ou banco de dados.
 proximoId :: [a] -> (a -> Int) -> Int
 proximoId xs f =
   if null xs then 1 else maximum (map f xs) + 1
 
--- ====== PASSAGEIROS ======
 
--- | Lista todos os passageiros (útil para o menu)
+-- ===============================================================
+--                         PASSAGEIROS
+-- ===============================================================
+
+-- | Retorna todos os passageiros do sistema.
+--   É usada, por exemplo, em menus de listagem e relatórios.
 listarPassageiros :: Sistema -> [Passageiro]
 listarPassageiros = passageiros
 
--- | Inserção com struct pronto (ignora o id passado e gera um novo)
+
+-- | Insere um passageiro já estruturado (com nome e documento),
+--   mas ignora o ID recebido e gera um novo ID automaticamente.
 inserirPassageiro :: Passageiro -> Sistema -> Either String Sistema
 inserirPassageiro p sys =
   inserirPassageiroDados (nome p) (documento p) sys
 
--- | Inserção a partir de nome/documento (validações simples)
+
+-- | Insere um novo passageiro a partir de nome e documento.
+--   Valida campos obrigatórios e impede duplicação de documentos.
 inserirPassageiroDados :: String -> String -> Sistema -> Either String Sistema
 inserirPassageiroDados nomeRaw docRaw sys =
   let nome' = trim nomeRaw
@@ -61,17 +93,22 @@ inserirPassageiroDados nomeRaw docRaw sys =
       in Right sys { passageiros = passageiros sys ++ [novoP] }
 
 
--- ====== COMPANHIAS ======
+-- ===============================================================
+--                         COMPANHIAS
+-- ===============================================================
 
--- | Lista todas as companhias (para o menu)
+-- | Retorna todas as companhias aéreas cadastradas.
 listarCompanhias :: Sistema -> [Companhia]
 listarCompanhias = companhias
 
--- | Inserção com struct (ignora id passado e gera um novo)
+
+-- | Insere uma companhia a partir de uma estrutura já existente.
 inserirCompanhia :: Companhia -> Sistema -> Either String Sistema
 inserirCompanhia c sys = inserirCompanhiaNome (nomeCompanhia c) sys
 
--- | Inserção a partir do nome (validações simples)
+
+-- | Insere uma companhia aérea apenas com o nome.
+--   Realiza validação básica e impede duplicidade.
 inserirCompanhiaNome :: String -> Sistema -> Either String Sistema
 inserirCompanhiaNome nomeRaw sys =
   let nome' = trim nomeRaw
@@ -84,24 +121,36 @@ inserirCompanhiaNome nomeRaw sys =
            novaC  = Companhia novoId nome'
        in Right sys { companhias = companhias sys ++ [novaC] }
 
--- ====== UTILS COM COMPANHIAS ======
+
+-- | Busca uma companhia pelo seu ID (retorna Maybe).
+--   Retorna `Just Companhia` se encontrada, ou `Nothing` se não.
 buscarCompanhiaPorId :: Int -> Sistema -> Maybe Companhia
-buscarCompanhiaPorId cid sys = case filter (\c -> idCompanhia c == cid) (companhias sys) of
-  (c:_) -> Just c
-  _     -> Nothing
+buscarCompanhiaPorId cid sys =
+  case filter (\c -> idCompanhia c == cid) (companhias sys) of
+    (c:_) -> Just c
+    _     -> Nothing
 
--- ====== VOOS ======
 
--- | Lista todos os voos (para o menu)
+-- ===============================================================
+--                         VOOS
+-- ===============================================================
+
+-- | Lista todos os voos disponíveis no sistema.
 listarVoos :: Sistema -> [Voo]
 listarVoos = voos
 
--- | Inserção com struct pronto (ignora id passado e gera novo).
---   Valida se a companhia existe.
-inserirVoo :: Voo -> Sistema -> Either String Sistema
-inserirVoo v sys = inserirVooDados (origem v) (destino v) (horario v) (idComp v) sys
 
--- | Inserção a partir dos campos (com validações simples)
+-- | Insere um voo já pronto (estrutura completa),
+--   mas força a geração de um novo ID para manter a consistência.
+--   Essa função chama 'inserirVooDados', que faz as validações.
+inserirVoo :: Voo -> Sistema -> Either String Sistema
+inserirVoo v sys =
+  inserirVooDados (origem v) (destino v) (horario v) (idComp v) sys
+
+
+-- | Insere um voo a partir de seus campos básicos.
+--   Verifica se a companhia existe antes de cadastrar.
+--   Caso contrário, retorna erro informando companhia inexistente.
 inserirVooDados :: String -> String -> String -> Int -> Sistema -> Either String Sistema
 inserirVooDados origemRaw destinoRaw horarioRaw idCompanhiaRef sys =
   let o = trim origemRaw
@@ -118,38 +167,55 @@ inserirVooDados origemRaw destinoRaw horarioRaw idCompanhiaRef sys =
             novoV  = Voo novoId o d h idCompanhiaRef
         in Right sys { voos = voos sys ++ [novoV] }
 
--- ====== UTILS: BUSCAS ======
+
+-- ===============================================================
+--                         BUSCAS AUXILIARES
+-- ===============================================================
+
+-- | Busca um passageiro pelo ID (retorna Maybe Passageiro).
 buscarPassageiroPorId :: Int -> Sistema -> Maybe Passageiro
-buscarPassageiroPorId pid sys = case filter (\p -> idPassageiro p == pid) (passageiros sys) of
-  (p:_) -> Just p
-  _     -> Nothing
+buscarPassageiroPorId pid sys =
+  case filter (\p -> idPassageiro p == pid) (passageiros sys) of
+    (p:_) -> Just p
+    _     -> Nothing
 
+-- | Busca um voo pelo ID (retorna Maybe Voo).
 buscarVooPorId :: Int -> Sistema -> Maybe Voo
-buscarVooPorId vid sys = case filter (\v -> idVoo v == vid) (voos sys) of
-  (v:_) -> Just v
-  _     -> Nothing
+buscarVooPorId vid sys =
+  case filter (\v -> idVoo v == vid) (voos sys) of
+    (v:_) -> Just v
+    _     -> Nothing
 
--- ====== BUSCAS DE VOOS ======
 
--- | Busca voos por origem (comparação case-insensitive e parcial)
+-- ===============================================================
+--                         BUSCAS DE VOOS
+-- ===============================================================
+-- As funções abaixo permitem pesquisar voos por origem, destino
+-- ou uma combinação dos dois. Elas são usadas no menu de busca.
+-- Todas as comparações ignoram diferenças de maiúsculas/minúsculas
+-- e aceitam correspondências parciais (substrings).
+
+-- | Busca voos pela origem informada.
 buscarVoosPorOrigem :: String -> Sistema -> [Voo]
 buscarVoosPorOrigem origemBusca sys =
   let origemLower = map toLower (trim origemBusca)
   in filter (\v -> origemLower `isInfixOf` map toLower (origem v)) (voos sys)
 
--- | Busca voos por destino (comparação case-insensitive e parcial)
+-- | Busca voos pelo destino informado.
 buscarVoosPorDestino :: String -> Sistema -> [Voo]
 buscarVoosPorDestino destinoBusca sys =
   let destinoLower = map toLower (trim destinoBusca)
   in filter (\v -> destinoLower `isInfixOf` map toLower (destino v)) (voos sys)
 
--- | Busca voos por origem E destino (comparação case-insensitive e parcial)
+-- | Busca voos pela combinação origem + destino (rota).
 buscarVoosPorRota :: String -> String -> Sistema -> [Voo]
 buscarVoosPorRota origemBusca destinoBusca sys =
-  let origemLower = map toLower (trim origemBusca)
+  let origemLower  = map toLower (trim origemBusca)
       destinoLower = map toLower (trim destinoBusca)
-  in filter (\v -> origemLower `isInfixOf` map toLower (origem v) &&
-                   destinoLower `isInfixOf` map toLower (destino v)) (voos sys)
+  in filter (\v ->
+       origemLower  `isInfixOf` map toLower (origem v) &&
+       destinoLower `isInfixOf` map toLower (destino v)
+     ) (voos sys)
 
 -- ====== RESERVAS ======
 
