@@ -5,28 +5,76 @@ import Negocio
 import Relatorios
 import Reservas
 
+-- ====== LOGIN ======
+
+  login :: IO Usuario
+  login = do
+    putStrLn "Digite seu nome:"
+    nomeUsuario <- getLine
+    putStrLn "Você é administrador? (s/n)"
+    resp <- getLine
+    let tipoUsuario = if resp == "s" then Administrador else Usuario
+    putStrLn $ "Bem-vindo, " ++ nomeUsuario ++ "!"
+    return (Usuario nomeUsuario tipoUsuario)
+
 -- ====== MENU PRINCIPAL ======
 
-menuPrincipal :: Sistema -> IO Sistema
-menuPrincipal sys = do
-  putStrLn ""
-  putStrLn "========== Aeroporto.hs =========="
-  putStrLn "1) Passageiros"
-  putStrLn "2) Companhias"
-  putStrLn "3) Voos"
-  putStrLn "4) Reservas"
-  putStrLn "5) Relatorios"
-  putStrLn "6) Salvar e Sair"
-  putStr   "Escolha: "
-  opc <- getLine
-  case opc of
-    "1" -> menuPassageiros sys >>= menuPrincipal
-    "2" -> menuCompanhias sys >>= menuPrincipal
-    "3" -> menuVoos sys >>= menuPrincipal
-    "4" -> menuReservas sys >>= menuPrincipal   
-    "5" -> menuRelatorios sys >>= menuPrincipal
-    "6" -> putStrLn "Saindo..." >> pure sys
-    _   -> putStrLn "Opcao invalida." >> menuPrincipal sys
+  menuPrincipal :: Usuario ->Sistema -> IO Sistema
+  menuPrincipal usuario sys = do
+    putStrLn ""
+    putStrLn "========== Aeroporto.hs =========="
+
+    if tipo usuario == Administrador
+      then do
+        putStrLn "1) Passageiros"
+        putStrLn "2) Companhias"
+        putStrLn "3) Voos"
+        putStrLn "4) Reservas"
+        putStrLn "5) Relatorios(Administrador)"
+        putStrLn "6) Salvar e Sair"
+      else do
+        putStrLn "1) Passageiro"
+        putStrLn "2) Companhias"
+        putStrLn "3) Voos"
+        putStrLn "4) Reservas"
+        putStrLn "5) Salvar e Sair"
+
+      putStr   "Escolha: "
+      opc <- getLine
+      case opc of
+        "1" -> menuPassageiros sys >>= menuPrincipal usuario
+        "2" -> menuCompanhias sys >>= menuPrincipal usuario
+        "3" -> menuVoos sys >>= menuPrincipal usuario
+        "4" -> menuReservas sys >>= menuPrincipal usuario   
+        "5" -> if tipo usuario == Administrador
+                 then menuRelatorios sys >>= menuPrincipal usuario
+                 else putStrLn "Saindo..." >> pure sys
+        "6" -> if tipo usuario == Administrador
+                 then putStrLn "Saindo..." >> pure sys
+                 else putStrLn "Opcao invalida." >> menuPrincipal usuario sys
+        _   -> putStrLn "Opcao invalida." >> menuPrincipal usuario sys
+
+
+--menuPrincipal :: Sistema -> IO Sistema
+--menuPrincipal sys = do
+  --putStrLn ""
+  --putStrLn "========== Aeroporto.hs =========="
+  --putStrLn "1) Passageiros"
+  --putStrLn "2) Companhias"
+  --putStrLn "3) Voos"
+  --putStrLn "4) Reservas"
+  --putStrLn "5) Relatorios"
+  --putStrLn "6) Salvar e Sair"
+  --putStr   "Escolha: "
+  --opc <- getLine
+  --case opc of
+    --"1" -> menuPassageiros sys >>= menuPrincipal
+    --"2" -> menuCompanhias sys >>= menuPrincipal
+    --"3" -> menuVoos sys >>= menuPrincipal
+    --"4" -> menuReservas sys >>= menuPrincipal   
+    --"5" -> menuRelatorios sys >>= menuPrincipal
+    --"6" -> putStrLn "Saindo..." >> pure sys
+    --_   -> putStrLn "Opcao invalida." >> menuPrincipal sys
 
 -- ====== SUBMENU: RESERVAS ======
 

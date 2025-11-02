@@ -13,10 +13,23 @@ main = do
   hSetEncoding stderr utf8
 
   putStrLn "Sistema de Gerenciamento de Aeroporto - Início"
-  sys0 <- carregarSistema
-  sys1 <- menuPrincipal sys0
+  sys <- carregarSistema
+  usuario <- login
+  sys1 <- menuPrincipal usuario sys
   salvarSistema sys1
   putStrLn "Até logo!"
+
+--main :: IO ()
+--main = do
+  -- UTF-8 por ser Windows
+  --hSetEncoding stdout utf8
+  --hSetEncoding stderr utf8
+
+  --putStrLn "Sistema de Gerenciamento de Aeroporto - Início"
+  --sys0 <- carregarSistema
+  --sys1 <- menuPrincipal sys0
+  --salvarSistema sys1
+  --putStrLn "Até logo!"
 
 
 --Sempre rodar os dois antes do stack run para aparecer os acentos nas letras

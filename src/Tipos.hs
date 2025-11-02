@@ -1,5 +1,15 @@
 module Tipos where
 
+ -- Tipos de Usuários
+ data TipoUsuario = Administrador | UsuarioComum
+   deriving (Show, Read, Eq) 
+
+  data Usuario = Usuario
+   { idUsuario   :: Int -- ver se tem algum jeito de fazer isso automaticamente
+   , nomeUsuario :: String
+   , tipoUsuario :: TipoUsuario
+   } deriving (Show, Read, Eq) 
+
 -- Passageiro
 data Passageiro = Passageiro
   { idPassageiro :: Int
