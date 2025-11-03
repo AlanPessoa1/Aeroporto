@@ -3,8 +3,13 @@ version: 0.1.0.0
 
 dependencies:
   - base >= 4.7 && < 5
+<<<<<<< HEAD
   - directory
   - time            
+=======
+  - time
+  - directory            
+>>>>>>> 4fc68fb892d470e43d8dfa2166e964e69ad9d846
 
 executables:
   aeroporto:

@@ -413,4 +413,8 @@ imprimirRelatorioReservas sys = do
       putStrLn $ formatarItem "Taxa de Confirmacao" (printf "%.2f%%" taxaConfirmacao)
       putStrLn $ formatarItem "Taxa de Cancelamento" (printf "%.2f%%" taxaCancelamento)
 
+<<<<<<< HEAD
   gerarRodape
+=======
+  gerarRodape
+>>>>>>> 4fc68fb892d470e43d8dfa2166e964e69ad9d846
