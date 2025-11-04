@@ -23,6 +23,20 @@ module Negocio
   , listarReservasPorPassageiro
   , listarReservasPorVoo
   , listarReservasPorStatus
+  -- Funcoes de usuarios (autenticacao e registro)
+  , registrarUsuario
+  , autenticarUsuario
+  , buscarUsuarioPorEmail
+  , buscarUsuarioPorId
+  -- Funcoes UPDATE de usuarios
+  , atualizarNomeUsuario
+  , atualizarEmailUsuario
+  , atualizarSenhaUsuario
+  -- Funcoes DELETE
+  , deletarUsuario
+  , deletarPassageiro
+  , deletarCompanhia
+  , deletarVoo
   ) where
 
 import Tipos
@@ -30,52 +44,145 @@ import Data.Char (isSpace, toLower)
 import Data.List (isInfixOf)
 
 
--- ===============================================================
---                   FUNÇÕES GENÉRICAS DE APOIO
--- ===============================================================
+-- Funcoes genericas de apoio
 
--- | Remove espaços em branco no início e no fim de uma string.
---   Essa função é útil para limpar entradas do usuário,
---   evitando erros de validação por espaços desnecessários.
+-- Remove espacos em branco no inicio e no fim de uma string.
 trim :: String -> String
 trim = f . f
   where f = reverse . dropWhile isSpace
 
 
--- | Calcula o próximo ID para uma nova entidade (genérico).
---   Recebe uma lista de elementos e uma função que extrai o ID atual.
---   Retorna o maior ID + 1, ou 1 se a lista estiver vazia.
---
---   Exemplo:
---     proximoId [Passageiro 1 "A" "123", Passageiro 2 "B" "456"] idPassageiro
---     → 3
---
---   Essa abordagem garante unicidade dos identificadores sem depender
---   de estado global ou banco de dados.
+-- Calcula o proximo ID para uma nova entidade.
+-- Retorna o maior ID + 1, ou 1 se a lista estiver vazia.
 proximoId :: [a] -> (a -> Int) -> Int
 proximoId xs f =
   if null xs then 1 else maximum (map f xs) + 1
 
 
--- ===============================================================
---                         PASSAGEIROS
--- ===============================================================
+-- Usuarios - Autenticacao e registro
 
--- | Retorna todos os passageiros do sistema.
---   É usada, por exemplo, em menus de listagem e relatórios.
+-- Busca um usuario pelo email (retorna Maybe Usuario).
+buscarUsuarioPorEmail :: String -> Sistema -> Maybe Usuario
+buscarUsuarioPorEmail email sys =
+  case filter (\u -> emailUsuario u == email) (usuarios sys) of
+    (u:_) -> Just u
+    _     -> Nothing
+
+
+-- Registra um novo usuario no sistema.
+-- Valida: nome, email e senha nao podem ser vazios. Email deve ser unico.
+registrarUsuario :: String -> String -> String -> TipoUsuario -> Sistema -> Either String Sistema
+registrarUsuario nomeRaw emailRaw senhaRaw tipo sys =
+  let nome'  = trim nomeRaw
+      email' = trim emailRaw
+      senha' = trim senhaRaw
+  in
+    -- Validações
+    if null nome'
+      then Left "Nome não pode ser vazio."
+    else if null email'
+      then Left "Email não pode ser vazio."
+    else if null senha'
+      then Left "Senha não pode ser vazia."
+    -- Verifica se email já está cadastrado
+    else if any (\u -> emailUsuario u == email') (usuarios sys)
+      then Left "Já existe um usuário com este email."
+    else
+      -- Cria novo usuário com ID incremental
+      let novoId = proximoId (usuarios sys) idUsuario
+          novoUsuario = Usuario novoId nome' email' senha' tipo
+      in Right sys { usuarios = usuarios sys ++ [novoUsuario] }
+
+
+-- Autentica um usuario com email e senha.
+autenticarUsuario :: String -> String -> Sistema -> Maybe Usuario
+autenticarUsuario email senha sys =
+  case buscarUsuarioPorEmail email sys of
+    Nothing -> Nothing  -- Email não encontrado
+    Just u  ->
+      -- Verifica se a senha está correta
+      if senhaUsuario u == senha
+        then Just u
+        else Nothing
+
+
+-- Busca um usuario pelo ID.
+buscarUsuarioPorId :: Int -> Sistema -> Maybe Usuario
+buscarUsuarioPorId uid sys =
+  case filter (\u -> idUsuario u == uid) (usuarios sys) of
+    (u:_) -> Just u
+    _     -> Nothing
+
+
+-- Atualiza o nome de um usuario.
+atualizarNomeUsuario :: Int -> String -> Sistema -> Either String Sistema
+atualizarNomeUsuario uid novoNomeRaw sys =
+  let novoNome = trim novoNomeRaw
+  in
+    if null novoNome
+      then Left "Nome não pode ser vazio."
+    else case break (\u -> idUsuario u == uid) (usuarios sys) of
+      (_, []) -> Left "Usuario não encontrado."
+      (antes, u:depois) ->
+        let usuarioAtualizado = u { nomeUsuario = novoNome }
+            novosUsuarios = antes ++ (usuarioAtualizado : depois)
+        in Right sys { usuarios = novosUsuarios }
+
+
+-- Atualiza o email de um usuario.
+atualizarEmailUsuario :: Int -> String -> Sistema -> Either String Sistema
+atualizarEmailUsuario uid novoEmailRaw sys =
+  let novoEmail = trim novoEmailRaw
+  in
+    if null novoEmail
+      then Left "Email não pode ser vazio."
+    else if any (\u -> emailUsuario u == novoEmail && idUsuario u /= uid) (usuarios sys)
+      then Left "Já existe um usuário com este email."
+    else case break (\u -> idUsuario u == uid) (usuarios sys) of
+      (_, []) -> Left "Usuario não encontrado."
+      (antes, u:depois) ->
+        let usuarioAtualizado = u { emailUsuario = novoEmail }
+            novosUsuarios = antes ++ (usuarioAtualizado : depois)
+        in Right sys { usuarios = novosUsuarios }
+
+
+-- Atualiza a senha de um usuario.
+atualizarSenhaUsuario :: Int -> String -> Sistema -> Either String Sistema
+atualizarSenhaUsuario uid novaSenhaRaw sys =
+  let novaSenha = trim novaSenhaRaw
+  in
+    if null novaSenha
+      then Left "Senha não pode ser vazia."
+    else case break (\u -> idUsuario u == uid) (usuarios sys) of
+      (_, []) -> Left "Usuario não encontrado."
+      (antes, u:depois) ->
+        let usuarioAtualizado = u { senhaUsuario = novaSenha }
+            novosUsuarios = antes ++ (usuarioAtualizado : depois)
+        in Right sys { usuarios = novosUsuarios }
+
+
+-- Deleta um usuario do sistema.
+deletarUsuario :: Int -> Sistema -> Either String Sistema
+deletarUsuario uid sys =
+  let usuariosFiltrados = filter (\u -> idUsuario u /= uid) (usuarios sys)
+  in
+    if length usuariosFiltrados == length (usuarios sys)
+      then Left "Usuario não encontrado."
+      else Right sys { usuarios = usuariosFiltrados }
+
+
+-- Retorna todos os passageiros do sistema.
 listarPassageiros :: Sistema -> [Passageiro]
 listarPassageiros = passageiros
 
 
--- | Insere um passageiro já estruturado (com nome e documento),
---   mas ignora o ID recebido e gera um novo ID automaticamente.
+-- Insere um passageiro (gera novo ID automaticamente).
 inserirPassageiro :: Passageiro -> Sistema -> Either String Sistema
 inserirPassageiro p sys =
   inserirPassageiroDados (nome p) (documento p) sys
 
 
--- | Insere um novo passageiro a partir de nome e documento.
---   Valida campos obrigatórios e impede duplicação de documentos.
+-- Insere um novo passageiro a partir de nome e documento.
 inserirPassageiroDados :: String -> String -> Sistema -> Either String Sistema
 inserirPassageiroDados nomeRaw docRaw sys =
   let nome' = trim nomeRaw
@@ -93,22 +200,33 @@ inserirPassageiroDados nomeRaw docRaw sys =
       in Right sys { passageiros = passageiros sys ++ [novoP] }
 
 
--- ===============================================================
---                         COMPANHIAS
--- ===============================================================
+-- Deleta um passageiro (valida se tem reservas).
+deletarPassageiro :: Int -> Sistema -> Either String Sistema
+deletarPassageiro pid sys =
+  -- Verifica se o passageiro existe
+  case filter (\p -> idPassageiro p == pid) (passageiros sys) of
+    [] -> Left "Passageiro não encontrado."
+    _  ->
+      -- Verifica se tem reservas
+      let temReservas = any (\r -> idPass r == pid) (reservas sys)
+      in if temReservas
+           then Left "Não é possível excluir passageiro com reservas. Cancele as reservas primeiro."
+           else
+             let passageirosFiltrados = filter (\p -> idPassageiro p /= pid) (passageiros sys)
+             in Right sys { passageiros = passageirosFiltrados }
 
--- | Retorna todas as companhias aéreas cadastradas.
+
+-- Retorna todas as companhias aereas cadastradas.
 listarCompanhias :: Sistema -> [Companhia]
 listarCompanhias = companhias
 
 
--- | Insere uma companhia a partir de uma estrutura já existente.
+-- Insere uma companhia a partir de uma estrutura ja existente.
 inserirCompanhia :: Companhia -> Sistema -> Either String Sistema
 inserirCompanhia c sys = inserirCompanhiaNome (nomeCompanhia c) sys
 
 
--- | Insere uma companhia aérea apenas com o nome.
---   Realiza validação básica e impede duplicidade.
+-- Insere uma companhia aerea apenas com o nome.
 inserirCompanhiaNome :: String -> Sistema -> Either String Sistema
 inserirCompanhiaNome nomeRaw sys =
   let nome' = trim nomeRaw
@@ -122,8 +240,7 @@ inserirCompanhiaNome nomeRaw sys =
        in Right sys { companhias = companhias sys ++ [novaC] }
 
 
--- | Busca uma companhia pelo seu ID (retorna Maybe).
---   Retorna `Just Companhia` se encontrada, ou `Nothing` se não.
+-- Busca uma companhia pelo seu ID.
 buscarCompanhiaPorId :: Int -> Sistema -> Maybe Companhia
 buscarCompanhiaPorId cid sys =
   case filter (\c -> idCompanhia c == cid) (companhias sys) of
@@ -131,26 +248,34 @@ buscarCompanhiaPorId cid sys =
     _     -> Nothing
 
 
--- ===============================================================
---                         VOOS
--- ===============================================================
+-- Deleta uma companhia (valida se tem voos).
+deletarCompanhia :: Int -> Sistema -> Either String Sistema
+deletarCompanhia cid sys =
+  -- Verifica se a companhia existe
+  case filter (\c -> idCompanhia c == cid) (companhias sys) of
+    [] -> Left "Companhia não encontrada."
+    _  ->
+      -- Verifica se tem voos
+      let temVoos = any (\v -> idComp v == cid) (voos sys)
+      in if temVoos
+           then Left "Não é possível excluir companhia com voos cadastrados. Delete os voos primeiro."
+           else
+             let companhiasFiltradas = filter (\c -> idCompanhia c /= cid) (companhias sys)
+             in Right sys { companhias = companhiasFiltradas }
 
--- | Lista todos os voos disponíveis no sistema.
+
+-- Lista todos os voos disponiveis no sistema.
 listarVoos :: Sistema -> [Voo]
 listarVoos = voos
 
 
--- | Insere um voo já pronto (estrutura completa),
---   mas força a geração de um novo ID para manter a consistência.
---   Essa função chama 'inserirVooDados', que faz as validações.
+-- Insere um voo (gera novo ID automaticamente).
 inserirVoo :: Voo -> Sistema -> Either String Sistema
 inserirVoo v sys =
   inserirVooDados (origem v) (destino v) (horario v) (idComp v) sys
 
 
--- | Insere um voo a partir de seus campos básicos.
---   Verifica se a companhia existe antes de cadastrar.
---   Caso contrário, retorna erro informando companhia inexistente.
+-- Insere um voo a partir de seus campos basicos.
 inserirVooDados :: String -> String -> String -> Int -> Sistema -> Either String Sistema
 inserirVooDados origemRaw destinoRaw horarioRaw idCompanhiaRef sys =
   let o = trim origemRaw
@@ -168,18 +293,30 @@ inserirVooDados origemRaw destinoRaw horarioRaw idCompanhiaRef sys =
         in Right sys { voos = voos sys ++ [novoV] }
 
 
--- ===============================================================
---                         BUSCAS AUXILIARES
--- ===============================================================
+-- Deleta um voo (valida se tem reservas).
+deletarVoo :: Int -> Sistema -> Either String Sistema
+deletarVoo vid sys =
+  -- Verifica se o voo existe
+  case filter (\v -> idVoo v == vid) (voos sys) of
+    [] -> Left "Voo não encontrado."
+    _  ->
+      -- Verifica se tem reservas
+      let temReservas = any (\r -> idVooRef r == vid) (reservas sys)
+      in if temReservas
+           then Left "Não é possível excluir voo com reservas cadastradas. Cancele as reservas primeiro."
+           else
+             let voosFiltrados = filter (\v -> idVoo v /= vid) (voos sys)
+             in Right sys { voos = voosFiltrados }
 
--- | Busca um passageiro pelo ID (retorna Maybe Passageiro).
+
+-- Busca um passageiro pelo ID.
 buscarPassageiroPorId :: Int -> Sistema -> Maybe Passageiro
 buscarPassageiroPorId pid sys =
   case filter (\p -> idPassageiro p == pid) (passageiros sys) of
     (p:_) -> Just p
     _     -> Nothing
 
--- | Busca um voo pelo ID (retorna Maybe Voo).
+-- Busca um voo pelo ID.
 buscarVooPorId :: Int -> Sistema -> Maybe Voo
 buscarVooPorId vid sys =
   case filter (\v -> idVoo v == vid) (voos sys) of
@@ -187,27 +324,19 @@ buscarVooPorId vid sys =
     _     -> Nothing
 
 
--- ===============================================================
---                         BUSCAS DE VOOS
--- ===============================================================
--- As funções abaixo permitem pesquisar voos por origem, destino
--- ou uma combinação dos dois. Elas são usadas no menu de busca.
--- Todas as comparações ignoram diferenças de maiúsculas/minúsculas
--- e aceitam correspondências parciais (substrings).
-
--- | Busca voos pela origem informada.
+-- Busca voos pela origem informada.
 buscarVoosPorOrigem :: String -> Sistema -> [Voo]
 buscarVoosPorOrigem origemBusca sys =
   let origemLower = map toLower (trim origemBusca)
   in filter (\v -> origemLower `isInfixOf` map toLower (origem v)) (voos sys)
 
--- | Busca voos pelo destino informado.
+-- Busca voos pelo destino informado.
 buscarVoosPorDestino :: String -> Sistema -> [Voo]
 buscarVoosPorDestino destinoBusca sys =
   let destinoLower = map toLower (trim destinoBusca)
   in filter (\v -> destinoLower `isInfixOf` map toLower (destino v)) (voos sys)
 
--- | Busca voos pela combinação origem + destino (rota).
+-- Busca voos pela combinacao origem + destino (rota).
 buscarVoosPorRota :: String -> String -> Sistema -> [Voo]
 buscarVoosPorRota origemBusca destinoBusca sys =
   let origemLower  = map toLower (trim origemBusca)

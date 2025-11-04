@@ -6,18 +6,29 @@ import Tipos
 import Persistencia
 import Menus
 
+-- | Função principal do programa
+-- Inicializa o sistema, processa autenticação e executa menu principal
 main :: IO ()
 main = do
-  -- UTF-8 por ser Windows
+  -- Configura UTF-8 para Windows
   hSetEncoding stdout utf8
   hSetEncoding stderr utf8
 
-  putStrLn "Sistema de Gerenciamento de Aeroporto - Início"
+  putStrLn "Sistema de Gerenciamento de Aeroporto - Inicio"
+
+  -- Carrega dados salvos
   sys <- carregarSistema
-  usuario <- login
-  sys1 <- menuPrincipal usuario sys
-  salvarSistema sys1
-  putStrLn "Até logo!"
+
+  -- Executa menu de autenticação (login ou registro)
+  -- Retorna o usuário autenticado e o sistema (que pode ter sido atualizado com novo usuário)
+  (usuario, sysAtualizado) <- menuAutenticacao sys
+
+  -- Executa menu principal com o usuário autenticado
+  sysRetorno <- menuPrincipal usuario sysAtualizado
+
+  -- Salva todos os dados ao sair
+  salvarSistema sysRetorno
+  putStrLn "Ate logo!"
 
 --main :: IO ()
 --main = do

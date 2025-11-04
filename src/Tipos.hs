@@ -1,14 +1,19 @@
 module Tipos where
 
- -- Tipos de Usuários
- data TipoUsuario = Administrador | UsuarioComum
-   deriving (Show, Read, Eq) 
+-- Tipos de Usuários
+-- TipoUsuario define os níveis de acesso no sistema
+data TipoUsuario = Administrador | UsuarioComum
+  deriving (Show, Read, Eq)
 
-  data Usuario = Usuario
-   { idUsuario   :: Int -- ver se tem algum jeito de fazer isso automaticamente
-   , nomeUsuario :: String
-   , tipoUsuario :: TipoUsuario
-   } deriving (Show, Read, Eq) 
+-- Usuario armazena as informações de autenticação e identificação
+-- Inclui: ID único, nome, email (usado para login), senha e tipo de usuário
+data Usuario = Usuario
+  { idUsuario   :: Int
+  , nomeUsuario :: String
+  , emailUsuario :: String  -- Email para login (deve ser único)
+  , senhaUsuario :: String  -- Senha para autenticação (em texto simples por simplicidade)
+  , tipoUsuario :: TipoUsuario
+  } deriving (Show, Read, Eq) 
 
 -- Passageiro
 data Passageiro = Passageiro
@@ -45,15 +50,18 @@ data Reserva = Reserva
   } deriving (Show, Read, Eq)
 
 -- Estado do sistema em memória
+-- Sistema armazena todas as entidades do sistema em listas
 data Sistema = Sistema
-  { passageiros :: [Passageiro]
+  { usuarios    :: [Usuario]    -- Lista de usuários cadastrados
+  , passageiros :: [Passageiro]
   , companhias  :: [Companhia]
   , voos        :: [Voo]
   , reservas    :: [Reserva]
   } deriving (Show, Read, Eq)
 
+-- Sistema vazio inicial (sem nenhum dado)
 sistemaVazio :: Sistema
-sistemaVazio = Sistema [] [] [] []
+sistemaVazio = Sistema [] [] [] [] []
 
 
 
