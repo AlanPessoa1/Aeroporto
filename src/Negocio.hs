@@ -13,7 +13,9 @@
 module Negocio
   ( inserirPassageiro, inserirPassageiroDados, listarPassageiros, proximoId
   , inserirCompanhia, inserirCompanhiaNome, listarCompanhias
+  , editarCompanhia, excluirCompanhia
   , listarVoos, inserirVoo, inserirVooDados, buscarCompanhiaPorId
+  , editarVoo, excluirVoo
   , buscarPassageiroPorId, buscarVooPorId
   , buscarVoosPorOrigem, buscarVoosPorDestino, buscarVoosPorRota
   , listarReservas
@@ -23,6 +25,11 @@ module Negocio
   , listarReservasPorPassageiro
   , listarReservasPorVoo
   , listarReservasPorStatus
+  , inserirUsuario
+  , listarUsuarios
+  , editarUsuario
+  , excluirUsuario
+  , buscarUsuarioPorId
   ) where
 
 import Tipos
@@ -109,10 +116,13 @@ inserirCompanhia c sys = inserirCompanhiaNome (nomeCompanhia c) sys
 
 -- | Insere uma companhia aérea apenas com o nome.
 --   Realiza validação básica e impede duplicidade.
+--   Valida limite máximo de companhias (5).
 inserirCompanhiaNome :: String -> Sistema -> Either String Sistema
 inserirCompanhiaNome nomeRaw sys =
   let nome' = trim nomeRaw
-  in if null nome'
+  in if length (companhias sys) >= 5
+        then Left "Limite de companhias atingido (maximo: 5)."
+     else if null nome'
         then Left "Nome da companhia não pode ser vazio."
      else if any (\x -> nomeCompanhia x == nome') (companhias sys)
         then Left "Já existe uma companhia com esse nome."
@@ -130,6 +140,31 @@ buscarCompanhiaPorId cid sys =
     (c:_) -> Just c
     _     -> Nothing
 
+-- | Edita o nome de uma companhia existente
+editarCompanhia :: Int -> String -> Sistema -> Either String Sistema
+editarCompanhia cid novoNomeRaw sys =
+  let novoNome = trim novoNomeRaw
+  in if null novoNome
+        then Left "Nome da companhia não pode ser vazio."
+     else if any (\c -> nomeCompanhia c == novoNome && idCompanhia c /= cid) (companhias sys)
+        then Left "Já existe uma companhia com esse nome."
+     else case break (\c -> idCompanhia c == cid) (companhias sys) of
+       (_, []) -> Left "Companhia não encontrada."
+       (antes, c:depois) ->
+         let c' = c { nomeCompanhia = novoNome }
+         in Right sys { companhias = antes ++ (c':depois) }
+
+-- | Exclui uma companhia (apenas se não houver voos associados)
+excluirCompanhia :: Int -> Sistema -> Either String Sistema
+excluirCompanhia cid sys =
+  case buscarCompanhiaPorId cid sys of
+    Nothing -> Left "Companhia não encontrada."
+    Just _ ->
+      let voosAssociados = filter (\v -> idComp v == cid) (voos sys)
+      in if not (null voosAssociados)
+           then Left "Não é possível excluir companhia com voos cadastrados."
+           else Right sys { companhias = filter (\c -> idCompanhia c /= cid) (companhias sys) }
+
 
 -- ===============================================================
 --                         VOOS
@@ -145,26 +180,29 @@ listarVoos = voos
 --   Essa função chama 'inserirVooDados', que faz as validações.
 inserirVoo :: Voo -> Sistema -> Either String Sistema
 inserirVoo v sys =
-  inserirVooDados (origem v) (destino v) (horario v) (idComp v) sys
+  inserirVooDados (origem v) (destino v) (horario v) (idComp v) (capacidade v) sys
 
 
 -- | Insere um voo a partir de seus campos básicos.
 --   Verifica se a companhia existe antes de cadastrar.
---   Caso contrário, retorna erro informando companhia inexistente.
-inserirVooDados :: String -> String -> String -> Int -> Sistema -> Either String Sistema
-inserirVooDados origemRaw destinoRaw horarioRaw idCompanhiaRef sys =
+--   Valida limite máximo de voos (20).
+inserirVooDados :: String -> String -> String -> Int -> Int -> Sistema -> Either String Sistema
+inserirVooDados origemRaw destinoRaw horarioRaw idCompanhiaRef cap sys =
   let o = trim origemRaw
       d = trim destinoRaw
       h = trim horarioRaw
   in
-    if null o then Left "Origem não pode ser vazia."
+    if length (voos sys) >= 20
+       then Left "Limite de voos atingido (maximo: 20)."
+    else if null o then Left "Origem não pode ser vazia."
     else if null d then Left "Destino não pode ser vazio."
     else if null h then Left "Horário não pode ser vazio."
+    else if cap <= 0 then Left "Capacidade deve ser maior que zero."
     else case buscarCompanhiaPorId idCompanhiaRef sys of
       Nothing -> Left "Companhia informada não existe."
       Just _  ->
         let novoId = proximoId (voos sys) idVoo
-            novoV  = Voo novoId o d h idCompanhiaRef
+            novoV  = Voo novoId o d h idCompanhiaRef cap
         in Right sys { voos = voos sys ++ [novoV] }
 
 
@@ -185,6 +223,37 @@ buscarVooPorId vid sys =
   case filter (\v -> idVoo v == vid) (voos sys) of
     (v:_) -> Just v
     _     -> Nothing
+
+-- | Edita um voo existente
+editarVoo :: Int -> String -> String -> String -> Int -> Int -> Sistema -> Either String Sistema
+editarVoo vid origemRaw destinoRaw horarioRaw idCompanhiaRef cap sys =
+  let o = trim origemRaw
+      d = trim destinoRaw
+      h = trim horarioRaw
+  in
+    if null o then Left "Origem não pode ser vazia."
+    else if null d then Left "Destino não pode ser vazio."
+    else if null h then Left "Horário não pode ser vazio."
+    else if cap <= 0 then Left "Capacidade deve ser maior que zero."
+    else case buscarCompanhiaPorId idCompanhiaRef sys of
+      Nothing -> Left "Companhia informada não existe."
+      Just _ ->
+        case break (\v -> idVoo v == vid) (voos sys) of
+          (_, []) -> Left "Voo não encontrado."
+          (antes, v:depois) ->
+            let v' = v { origem = o, destino = d, horario = h, idComp = idCompanhiaRef, capacidade = cap }
+            in Right sys { voos = antes ++ (v':depois) }
+
+-- | Exclui um voo (apenas se não houver reservas confirmadas)
+excluirVoo :: Int -> Sistema -> Either String Sistema
+excluirVoo vid sys =
+  case buscarVooPorId vid sys of
+    Nothing -> Left "Voo não encontrado."
+    Just _ ->
+      let reservasConfirmadas = filter (\r -> idVooRef r == vid && status r == Confirmada) (reservas sys)
+      in if not (null reservasConfirmadas)
+           then Left "Não é possível excluir voo com reservas confirmadas."
+           else Right sys { voos = filter (\v -> idVoo v /= vid) (voos sys) }
 
 
 -- ===============================================================
@@ -238,23 +307,29 @@ listarReservasPorStatus :: StatusReserva -> Sistema -> [Reserva]
 listarReservasPorStatus st sys =
   filter (\r -> status r == st) (reservas sys)
 
--- | Cria uma reserva Pendente para (passageiro, voo)
+-- | Cria uma reserva Confirmada para (passageiro, voo)
 -- Regras:
 --  - passageiro e voo devem existir
 --  - não permitir reserva duplicada (mesmo passageiro + mesmo voo) em status não-cancelado
+--  - verificar se voo tem capacidade disponível
 criarReserva :: Int -> Int -> Sistema -> Either String Sistema
 criarReserva pid vid sys = do
   case (buscarPassageiroPorId pid sys, buscarVooPorId vid sys) of
     (Nothing, _) -> Left "Passageiro inexistente."
     (_, Nothing) -> Left "Voo inexistente."
-    (Just _, Just _) ->
+    (Just _, Just voo) ->
       let conflito = any (\r -> idPass r == pid && idVooRef r == vid && status r /= Cancelada) (reservas sys)
       in if conflito
            then Left "Já existe uma reserva ativa para este passageiro neste voo."
            else
-             let novoId = proximoId (reservas sys) idReserva
-                 novaR  = Reserva novoId pid vid Pendente
-             in Right sys { reservas = reservas sys ++ [novaR] }
+             let reservasConfirmadas = filter (\r -> idVooRef r == vid && status r == Confirmada) (reservas sys)
+                 vagasOcupadas = length reservasConfirmadas
+             in if vagasOcupadas >= capacidade voo
+                  then Left $ "Voo lotado! Capacidade: " ++ show (capacidade voo) ++ " assentos."
+                  else
+                    let novoId = proximoId (reservas sys) idReserva
+                        novaR  = Reserva novoId pid vid Confirmada  -- Já cria como Confirmada
+                    in Right sys { reservas = reservas sys ++ [novaR] }
 
 -- | Confirma uma reserva Pendente
 confirmarReserva :: Int -> Sistema -> Either String Sistema
@@ -280,4 +355,70 @@ cancelarReserva rid sys =
         _          ->
           let r' = r { status = Cancelada }
           in Right sys { reservas = antes ++ (r':depois) }
+
+-- ====== USUARIOS ======
+
+-- | Lista todos os usuarios
+listarUsuarios :: Sistema -> [Usuario]
+listarUsuarios = usuarios
+
+-- | Insere um novo usuario (para registro)
+-- Valida campos obrigatorios e impede duplicacao de email e nomeUsuario
+inserirUsuario :: String -> String -> String -> Sistema -> Either String Sistema
+inserirUsuario nomeRaw emailRaw senhaRaw sys =
+  let nome'  = trim nomeRaw
+      email' = trim emailRaw
+      senha' = trim senhaRaw
+  in
+    if null nome'
+       then Left "Nome de usuário não pode ser vazio."
+    else if null email'
+       then Left "Email não pode ser vazio."
+    else if null senha'
+       then Left "Senha não pode ser vazia."
+    else if any (\u -> emailUsuario u == email') (usuarios sys)
+       then Left "Já existe um usuário com esse email."
+    else if any (\u -> nomeUsuario u == nome') (usuarios sys)
+       then Left "Já existe um usuário com esse nome."
+    else
+      let novoId = proximoId (usuarios sys) idUsuario
+          novoU  = Usuario novoId nome' email' senha' UsuarioComum
+      in Right sys { usuarios = usuarios sys ++ [novoU] }
+
+-- | Busca um usuario pelo ID
+buscarUsuarioPorId :: Int -> Sistema -> Maybe Usuario
+buscarUsuarioPorId uid sys =
+  case filter (\u -> idUsuario u == uid) (usuarios sys) of
+    (u:_) -> Just u
+    _     -> Nothing
+
+-- | Edita um usuario (nome, email, senha)
+editarUsuario :: Int -> String -> String -> String -> Sistema -> Either String Sistema
+editarUsuario uid nomeRaw emailRaw senhaRaw sys =
+  let nome'  = trim nomeRaw
+      email' = trim emailRaw
+      senha' = trim senhaRaw
+  in
+    if null nome'
+       then Left "Nome de usuário não pode ser vazio."
+    else if null email'
+       then Left "Email não pode ser vazio."
+    else if null senha'
+       then Left "Senha não pode ser vazia."
+    else if any (\u -> emailUsuario u == email' && idUsuario u /= uid) (usuarios sys)
+       then Left "Já existe um usuário com esse email."
+    else if any (\u -> nomeUsuario u == nome' && idUsuario u /= uid) (usuarios sys)
+       then Left "Já existe um usuário com esse nome."
+    else case break (\u -> idUsuario u == uid) (usuarios sys) of
+      (_, []) -> Left "Usuário não encontrado."
+      (antes, u:depois) ->
+        let u' = u { nomeUsuario = nome', emailUsuario = email', senhaUsuario = senha' }
+        in Right sys { usuarios = antes ++ (u':depois) }
+
+-- | Exclui um usuario (admin pode excluir outros usuarios)
+excluirUsuario :: Int -> Sistema -> Either String Sistema
+excluirUsuario uid sys =
+  case buscarUsuarioPorId uid sys of
+    Nothing -> Left "Usuário não encontrado."
+    Just _ -> Right sys { usuarios = filter (\u -> idUsuario u /= uid) (usuarios sys) }
 

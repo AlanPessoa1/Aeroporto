@@ -12,6 +12,7 @@ data TipoUsuario
 data Usuario = Usuario
   { idUsuario   :: Int
   , nomeUsuario :: String
+  , emailUsuario :: String
   , senhaUsuario :: String
   , tipoUsuario :: TipoUsuario
   } deriving (Show, Read, Eq)
@@ -40,11 +41,12 @@ data Companhia = Companhia
 -- ======================================================
 
 data Voo = Voo
-  { idVoo   :: Int
-  , origem  :: String
-  , destino :: String
-  , horario :: String
-  , idComp  :: Int
+  { idVoo      :: Int
+  , origem     :: String
+  , destino    :: String
+  , horario    :: String
+  , idComp     :: Int
+  , capacidade :: Int
   } deriving (Show, Read, Eq)
 
 -- ======================================================

@@ -5,7 +5,7 @@ import GHC.IO.Encoding (utf8)
 import Tipos
 import Persistencia
 import Menus
-import Login (login)
+import Login (menuInicial)
 import Control.Monad (when)
 
 main :: IO ()
@@ -20,19 +20,31 @@ main = do
         if null (usuarios sys0)
           then sys0 {
             usuarios =
-              [ Usuario 1 "admin" "123" Administrador
-              , Usuario 2 "joao"  "abc" UsuarioComum
+              [ Usuario 1 "admin" "admin@aeroporto.com" "123" Administrador
+              , Usuario 2 "joao"  "joao@email.com" "abc" UsuarioComum
+              ],
+            companhias =
+              [ Companhia 1 "Cia A"
+              , Companhia 2 "Cia B"
+              , Companhia 3 "Cia C"
+              ],
+            voos =
+              [ Voo 1 "Recife" "Salvador" "08:00" 1 5
+              , Voo 2 "Salvador" "Fortaleza" "10:00" 2 5
+              , Voo 3 "Fortaleza" "Natal" "12:00" 3 5
+              , Voo 4 "Natal" "Recife" "14:00" 1 5
+              , Voo 5 "Recife" "Brasilia" "16:00" 2 5
               ]
           }
           else sys0
 
-  -- Se criou usuários default, salva agora
+  -- Se criou dados default, salva agora
   when (null (usuarios sys0)) $
     salvarSistema sys
 
-  usuario <- login (usuarios sys)
+  (sysAtualizado, usuario) <- menuInicial sys
 
-  sys1 <- menuPrincipal usuario sys
+  sys1 <- menuPrincipal usuario sysAtualizado
 
   putStrLn "Salvando dados..."
   salvarSistema sys1
