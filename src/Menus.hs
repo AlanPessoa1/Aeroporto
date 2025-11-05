@@ -1,0 +1,406 @@
+-- | Módulo responsável pela interface textual do sistema.
+-- Apresenta menus, coleta entradas do usuário e invoca as funções da camada de negócio.
+-- Atua como o “controlador” principal do programa.
+module Menus (menuPrincipal) where
+
+import Tipos
+import Negocio
+import Relatorios
+  ( imprimirRelatorioEstatisticasGerais
+  , imprimirRelatorioPassageiros
+  , imprimirRelatorioCompanhias
+  , imprimirRelatorioVoos
+  , imprimirRelatorioReservas
+  )
+
+-- ============================================================
+--                 FUNÇÃO PRINCIPAL DE MENU
+-- ============================================================
+
+-- | Menu principal do sistema. Recebe o usuário logado e o estado do sistema.
+menuPrincipal :: Usuario -> Sistema -> IO Sistema
+menuPrincipal usuario sys = do
+  putStrLn ""
+  putStrLn "========== Aeroporto.hs =========="
+
+  case tipoUsuario usuario of
+    Administrador -> do
+      putStrLn "1) Passageiros"
+      putStrLn "2) Companhias"
+      putStrLn "3) Voos"
+      putStrLn "4) Reservas"
+      putStrLn "5) Relatórios"
+      putStrLn "6) Sair"
+      putStr "Escolha: "
+      opc <- getLine
+      tratarOpcaoAdministrador usuario sys opc
+
+    UsuarioComum -> do
+      putStrLn "1) Passageiros"
+      putStrLn "2) Companhias"
+      putStrLn "3) Voos"
+      putStrLn "4) Reservas"
+      putStrLn "5) Sair"
+      putStr "Escolha: "
+      opc <- getLine
+      tratarOpcaoUsuario usuario sys opc
+
+
+-- ============================================================
+--          TRATAMENTO DE OPÇÕES (ADMIN / USUÁRIO)
+-- ============================================================
+-- Admin options
+tratarOpcaoAdministrador :: Usuario -> Sistema -> String -> IO Sistema
+tratarOpcaoAdministrador usuario sys opc = case opc of
+  "1" -> menuPassageiros sys >>= menuPrincipal usuario
+  "2" -> menuCompanhias sys >>= menuPrincipal usuario
+  "3" -> menuVoos sys >>= menuPrincipal usuario
+  "4" -> menuReservas sys >>= menuPrincipal usuario
+  "5" -> menuRelatorios sys >>= menuPrincipal usuario
+  "6" -> putStrLn "Saindo..." >> pure sys
+  _   -> putStrLn "Opção inválida." >> menuPrincipal usuario sys
+
+-- User options
+tratarOpcaoUsuario :: Usuario -> Sistema -> String -> IO Sistema
+tratarOpcaoUsuario usuario sys opc = case opc of
+  "1" -> menuPassageiros sys >>= menuPrincipal usuario
+  "2" -> menuCompanhias sys >>= menuPrincipal usuario
+  "3" -> menuVoos sys >>= menuPrincipal usuario
+  "4" -> menuReservas sys >>= menuPrincipal usuario
+  "5" -> putStrLn "Saindo..." >> pure sys
+  _   -> putStrLn "Opção inválida." >> menuPrincipal usuario sys
+
+
+-- ============================================================
+--             MENU DE RELATÓRIOS (NOVO)
+-- ============================================================
+
+menuRelatorios :: Sistema -> IO Sistema
+menuRelatorios sys = do
+  putStrLn ""
+  putStrLn "---- Relatórios ----"
+  putStrLn "1) Estatísticas Gerais"
+  putStrLn "2) Passageiros"
+  putStrLn "3) Companhias"
+  putStrLn "4) Voos"
+  putStrLn "5) Reservas"
+  putStrLn "6) Voltar"
+  putStr "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> imprimirRelatorioEstatisticasGerais sys >> menuRelatorios sys
+    "2" -> imprimirRelatorioPassageiros sys >> menuRelatorios sys
+    "3" -> imprimirRelatorioCompanhias sys >> menuRelatorios sys
+    "4" -> imprimirRelatorioVoos sys >> menuRelatorios sys
+    "5" -> imprimirRelatorioReservas sys >> menuRelatorios sys
+    "6" -> pure sys
+    _   -> putStrLn "Opção inválida." >> menuRelatorios sys
+
+
+-- ============================================================
+--                 SUBMENU: PASSAGEIROS
+-- ============================================================
+
+menuPassageiros :: Sistema -> IO Sistema
+menuPassageiros sys = do
+  putStrLn ""
+  putStrLn "---- Passageiros ----"
+  putStrLn "1) Cadastrar"
+  putStrLn "2) Listar"
+  putStrLn "3) Voltar"
+  putStr "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> acaoCadastrarPassageiro sys >>= menuPassageiros
+    "2" -> acaoListarPassageiros sys >> menuPassageiros sys
+    "3" -> pure sys
+    _   -> putStrLn "Opção inválida." >> menuPassageiros sys
+
+acaoCadastrarPassageiro :: Sistema -> IO Sistema
+acaoCadastrarPassageiro sys = do
+  putStr "Nome: "
+  nome <- getLine
+  putStr "Documento: "
+  doc <- getLine
+  case inserirPassageiroDados nome doc sys of
+    Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+    Right sys' -> putStrLn "[OK] Passageiro cadastrado." >> pure sys'
+
+acaoListarPassageiros :: Sistema -> IO ()
+acaoListarPassageiros sys = do
+  let ps = listarPassageiros sys
+  if null ps
+     then putStrLn "(vazio)"
+     else mapM_ (\p -> putStrLn $ "- ID " ++ show (idPassageiro p)
+                               ++ " | Nome: " ++ nome p
+                               ++ " | Doc: "  ++ documento p) ps
+
+-- ============================================================
+--                 SUBMENU: COMPANHIAS
+-- ============================================================
+
+menuCompanhias :: Sistema -> IO Sistema
+menuCompanhias sys = do
+  putStrLn ""
+  putStrLn "---- Companhias ----"
+  putStrLn "1) Cadastrar"
+  putStrLn "2) Listar"
+  putStrLn "3) Voltar"
+  putStr "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> acaoCadastrarCompanhia sys >>= menuCompanhias
+    "2" -> acaoListarCompanhias sys >> menuCompanhias sys
+    "3" -> pure sys
+    _   -> putStrLn "Opção inválida." >> menuCompanhias sys
+
+acaoCadastrarCompanhia :: Sistema -> IO Sistema
+acaoCadastrarCompanhia sys = do
+  putStr "Nome da Companhia: "
+  nome <- getLine
+  case inserirCompanhiaNome nome sys of
+    Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+    Right sys' -> putStrLn "[OK] Companhia cadastrada." >> pure sys'
+
+acaoListarCompanhias :: Sistema -> IO ()
+acaoListarCompanhias sys = do
+  let cs = listarCompanhias sys
+  if null cs
+     then putStrLn "(vazio)"
+     else mapM_ (\c -> putStrLn $ "- ID " ++ show (idCompanhia c)
+                               ++ " | Nome: " ++ nomeCompanhia c) cs
+
+-- ============================================================
+--                 SUBMENU: VOOS
+-- ============================================================
+
+menuVoos :: Sistema -> IO Sistema
+menuVoos sys = do
+  putStrLn ""
+  putStrLn "---- Voos ----"
+  putStrLn "1) Cadastrar"
+  putStrLn "2) Listar"
+  putStrLn "3) Buscar"
+  putStrLn "4) Voltar"
+  putStr "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> acaoCadastrarVoo sys >>= menuVoos
+    "2" -> acaoListarVoos sys >> menuVoos sys
+    "3" -> menuBuscaVoos sys >> menuVoos sys
+    "4" -> pure sys
+    _   -> putStrLn "Opção inválida." >> menuVoos sys
+
+acaoCadastrarVoo :: Sistema -> IO Sistema
+acaoCadastrarVoo sys = do
+  putStr "Origem: "
+  origem <- getLine
+  putStr "Destino: "
+  destino <- getLine
+  putStr "Horário (ex: 12:30): "
+  horario <- getLine
+  putStr "ID da Companhia: "
+  sCid <- getLine
+  case readIntSafe sCid of
+    Nothing -> putStrLn "[ERRO] ID da companhia inválido." >> pure sys
+    Just cid -> case inserirVooDados origem destino horario cid sys of
+      Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+      Right sys' -> putStrLn "[OK] Voo cadastrado." >> pure sys'
+
+acaoListarVoos :: Sistema -> IO ()
+acaoListarVoos sys = do
+  let vs = listarVoos sys
+  if null vs
+     then putStrLn "(vazio)"
+     else mapM_ (printVoo sys) vs
+
+printVoo :: Sistema -> Voo -> IO ()
+printVoo sys v = do
+  let comp = maybe "(Desconhecida)" nomeCompanhia (buscarCompanhiaPorId (idComp v) sys)
+  putStrLn $ "- ID " ++ show (idVoo v)
+          ++ " | " ++ origem v ++ " -> " ++ destino v
+          ++ " | " ++ horario v
+          ++ " | Companhia: " ++ comp
+
+-- ============================================================
+--                 BUSCA DE VOOS
+-- ============================================================
+
+menuBuscaVoos :: Sistema -> IO ()
+menuBuscaVoos sys = do
+  putStrLn ""
+  putStrLn "---- Buscar Voos ----"
+  putStrLn "1) Por Origem"
+  putStrLn "2) Por Destino"
+  putStrLn "3) Por Rota"
+  putStrLn "4) Voltar"
+  putStr "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> putStr "Origem: " >> getLine >>= \o ->
+             mapM_ (printVoo sys) (buscarVoosPorOrigem o sys) >> menuBuscaVoos sys
+    "2" -> putStr "Destino: " >> getLine >>= \d ->
+             mapM_ (printVoo sys) (buscarVoosPorDestino d sys) >> menuBuscaVoos sys
+    "3" -> do
+             putStr "Origem: "
+             o <- getLine
+             putStr "Destino: "
+             d <- getLine
+             mapM_ (printVoo sys) (buscarVoosPorRota o d sys)
+             menuBuscaVoos sys
+    "4" -> pure ()
+    _   -> putStrLn "Opção inválida." >> menuBuscaVoos sys
+
+-- ============================================================
+--                  SUBMENU: RESERVAS
+-- ============================================================
+
+menuReservas :: Sistema -> IO Sistema
+menuReservas sys = do
+  putStrLn ""
+  putStrLn "---- Reservas ----"
+  putStrLn "1) Criar"
+  putStrLn "2) Confirmar"
+  putStrLn "3) Cancelar"
+  putStrLn "4) Listar todas"
+  putStrLn "5) Listar por Passageiro"
+  putStrLn "6) Listar por Voo"
+  putStrLn "7) Listar por Status"
+  putStrLn "8) Voltar"
+  putStr "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> acaoCriarReserva sys >>= menuReservas
+    "2" -> acaoConfirmarReserva sys >>= menuReservas
+    "3" -> acaoCancelarReserva sys >>= menuReservas
+    "4" -> acaoListarReservas sys >> menuReservas sys
+    "5" -> acaoListarReservasPorPassageiro sys >> menuReservas sys
+    "6" -> acaoListarReservasPorVoo sys >> menuReservas sys
+    "7" -> menuListarReservasPorStatus sys >> menuReservas sys
+    "8" -> pure sys
+    _   -> putStrLn "Opção inválida." >> menuReservas sys
+
+-- ============================================================
+--                 AÇÕES: RESERVAS
+-- ============================================================
+
+acaoCriarReserva :: Sistema -> IO Sistema
+acaoCriarReserva sys = do
+  putStr "ID Passageiro: "
+  sPid <- getLine
+  putStr "ID Voo: "
+  sVid <- getLine
+  case (readIntSafe sPid, readIntSafe sVid) of
+    (Just pid, Just vid) ->
+      case criarReserva pid vid sys of
+        Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+        Right sys' -> putStrLn "[OK] Reserva criada (status: Pendente)." >> pure sys'
+    _ -> putStrLn "[ERRO] IDs inválidos." >> pure sys
+
+acaoConfirmarReserva :: Sistema -> IO Sistema
+acaoConfirmarReserva sys = do
+  putStr "ID da Reserva: "
+  sRid <- getLine
+  case readIntSafe sRid of
+    Just rid ->
+      case confirmarReserva rid sys of
+        Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+        Right sys' -> putStrLn "[OK] Reserva confirmada." >> pure sys'
+    _ -> putStrLn "[ERRO] ID inválido." >> pure sys
+
+acaoCancelarReserva :: Sistema -> IO Sistema
+acaoCancelarReserva sys = do
+  putStr "ID da Reserva: "
+  sRid <- getLine
+  case readIntSafe sRid of
+    Just rid ->
+      case cancelarReserva rid sys of
+        Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+        Right sys' -> putStrLn "[OK] Reserva cancelada." >> pure sys'
+    _ -> putStrLn "[ERRO] ID inválido." >> pure sys
+
+acaoListarReservas :: Sistema -> IO ()
+acaoListarReservas sys = do
+  let rs = listarReservas sys
+  if null rs
+    then putStrLn "(vazio)"
+    else mapM_ (printReserva sys) rs
+
+acaoListarReservasPorPassageiro :: Sistema -> IO ()
+acaoListarReservasPorPassageiro sys = do
+  putStr "ID Passageiro: "
+  sPid <- getLine
+  case readIntSafe sPid of
+    Just pid -> do
+      let rs = listarReservasPorPassageiro pid sys
+      if null rs then putStrLn "(vazio)" else mapM_ (printReserva sys) rs
+    _ -> putStrLn "[ERRO] ID inválido."
+
+acaoListarReservasPorVoo :: Sistema -> IO ()
+acaoListarReservasPorVoo sys = do
+  putStr "ID Voo: "
+  sVid <- getLine
+  case readIntSafe sVid of
+    Just vid -> do
+      let rs = listarReservasPorVoo vid sys
+      if null rs then putStrLn "(vazio)" else mapM_ (printReserva sys) rs
+    _ -> putStrLn "[ERRO] ID inválido."
+
+-- ============================================================
+--          LISTAGEM DE RESERVAS POR STATUS
+-- ============================================================
+
+menuListarReservasPorStatus :: Sistema -> IO ()
+menuListarReservasPorStatus sys = do
+  putStrLn ""
+  putStrLn "---- Listar por Status ----"
+  putStrLn "1) Pendentes"
+  putStrLn "2) Confirmadas"
+  putStrLn "3) Canceladas"
+  putStrLn "4) Voltar"
+  putStr "Escolha: "
+  opc <- getLine
+  case opc of
+    "1" -> acaoListarReservasPorStatus Pendente sys >> menuListarReservasPorStatus sys
+    "2" -> acaoListarReservasPorStatus Confirmada sys >> menuListarReservasPorStatus sys
+    "3" -> acaoListarReservasPorStatus Cancelada sys >> menuListarReservasPorStatus sys
+    "4" -> pure ()
+    _   -> putStrLn "Opção inválida." >> menuListarReservasPorStatus sys
+
+acaoListarReservasPorStatus :: StatusReserva -> Sistema -> IO ()
+acaoListarReservasPorStatus st sys = do
+  let rs = listarReservasPorStatus st sys
+  if null rs
+    then putStrLn "(nenhuma reserva encontrada)"
+    else do
+      putStrLn ""
+      putStrLn ("Encontradas " ++ show (length rs)
+                ++ " reserva(s) com status " ++ show st ++ ":")
+      mapM_ (printReserva sys) rs
+
+-- ============================================================
+--                EXIBIÇÃO FORMATADA DE RESERVA
+-- ============================================================
+
+printReserva :: Sistema -> Reserva -> IO ()
+printReserva sys r = do
+  let pn = maybe "(?)" nome (buscarPassageiroPorId (idPass r) sys)
+      v  = buscarVooPorId (idVooRef r) sys
+      rota = maybe "(voo?)"
+                  (\vv -> origem vv ++ " -> " ++ destino vv ++ " @ " ++ horario vv)
+                  v
+  putStrLn $ "- ID " ++ show (idReserva r)
+          ++ " | Passageiro: " ++ pn
+          ++ " | Voo: " ++ rota
+          ++ " | Status: " ++ show (status r)
+
+-- ============================================================
+--                FUNÇÃO AUXILIAR DE LEITURA
+-- ============================================================
+
+readIntSafe :: String -> Maybe Int
+readIntSafe s = case reads s of
+  [(n,"")] -> Just n
+  _        -> Nothing
+
+

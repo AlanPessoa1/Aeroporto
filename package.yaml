@@ -1,0 +1,23 @@
+name: aeroporto
+version: 0.1.0.0
+
+dependencies:
+  - base >= 4.7 && < 5
+  - directory
+  - time         
+  - bytestring   
+executables:
+  aeroporto:
+    main: Main.hs
+    source-dirs:
+      - app
+      - src
+    ghc-options:
+      - -Wall
+    dependencies:
+      - base
+      - directory        
+
+
+
+

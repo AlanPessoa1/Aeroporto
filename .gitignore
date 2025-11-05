@@ -1,0 +1,26 @@
+# Stack build artifacts
+.stack-work/
+
+# Compiled Object files
+*.o
+*.hi
+*.exe
+*.so
+*.dylib
+
+# Profiling
+*.prof
+*.aux
+*.hp
+*.eventlog
+
+# GHCi
+.ghci
+
+# Temporary files
+*~
+*.swp
+*.swo
+
+# User data files (remove this line if you want sample data in the repo)
+dados/

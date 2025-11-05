@@ -1,0 +1,30 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.38.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           aeroporto
+version:        0.1.0.0
+build-type:     Simple
+
+executable aeroporto
+  main-is: Main.hs
+  other-modules:
+      Login
+      Menus
+      Negocio
+      Persistencia
+      Relatorios
+      Tipos
+      Paths_aeroporto
+  hs-source-dirs:
+      app
+      src
+  ghc-options: -Wall
+  build-depends:
+      base
+    , bytestring
+    , directory
+    , time
+  default-language: Haskell2010
