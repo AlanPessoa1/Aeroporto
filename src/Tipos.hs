@@ -22,9 +22,9 @@ data Usuario = Usuario
 -- ======================================================
 
 data Passageiro = Passageiro
-  { idPassageiro :: Int
-  , nome         :: String
-  , documento    :: String
+  { idPassageiro  :: Int
+  , nome          :: String
+  , identificador :: String  -- Email, CPF, RG, etc.
   } deriving (Show, Read, Eq)
 
 -- ======================================================

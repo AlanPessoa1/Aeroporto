@@ -206,7 +206,7 @@ imprimirPassageiroComReservas resList p = do
   putStrLn separadorLinha
   putStrLn $ formatarItem "ID" (show pid)
   putStrLn $ formatarItem "Nome" (nome p)
-  putStrLn $ formatarItem "Documento" (documento p)
+  putStrLn $ formatarItem "Identificador" (identificador p)
   putStrLn ""
   putStrLn "  RESERVAS:"
   putStrLn $ formatarItemNum "  Total" totalRes

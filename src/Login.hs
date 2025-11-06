@@ -3,6 +3,7 @@ module Login (menuInicial) where
 import Tipos
 import Negocio (inserirUsuario)
 import System.IO (hFlush, stdout, hSetEcho)
+import System.Exit (exitSuccess)
 import Data.Char (toLower)
 
 -- Menu inicial: Registrar ou Entrar
@@ -24,9 +25,13 @@ menuInicial sys = do
       sys' <- registrarUsuario sys
       menuInicial sys'
     "2" -> do
-      usuario <- menuLogin (usuarios sys)
-      return (sys, usuario)
-    "3" -> error "Saindo do sistema..."
+      maybeUsuario <- menuLogin (usuarios sys)
+      case maybeUsuario of
+        Just usuario -> return (sys, usuario)
+        Nothing      -> menuInicial sys
+    "3" -> do
+      putStrLn "Saindo do sistema..."
+      exitSuccess
     _   -> do
       putStrLn "\nOpção inválida. Tente novamente."
       menuInicial sys
@@ -65,7 +70,7 @@ registrarUsuario sys = do
       return sys'
 
 -- Menu de login: escolher tipo de usuario
-menuLogin :: [Usuario] -> IO Usuario
+menuLogin :: [Usuario] -> IO (Maybe Usuario)
 menuLogin usuarios = do
   putStrLn "\n===================================="
   putStrLn "        SISTEMA DE ACESSO"
@@ -80,13 +85,15 @@ menuLogin usuarios = do
   case opcao of
     "1" -> loginPorTipo UsuarioComum usuarios
     "2" -> loginPorTipo Administrador usuarios
-    "3" -> error "Voltando..."
+    "3" -> do
+      putStrLn "Voltando..."
+      return Nothing
     _   -> do
       putStrLn "\nOpção inválida."
       menuLogin usuarios
 
 -- Tela de login por tipo de usuario
-loginPorTipo :: TipoUsuario -> [Usuario] -> IO Usuario
+loginPorTipo :: TipoUsuario -> [Usuario] -> IO (Maybe Usuario)
 loginPorTipo tipo usuarios = do
   putStrLn $ "\n---- Login como " ++ show tipo ++ " ----\n"
 
@@ -104,7 +111,7 @@ loginPorTipo tipo usuarios = do
   case autenticar nomeOuEmail senha tipo usuarios of
     Just u  -> do
       putStrLn $ "\nBem-vindo, " ++ nomeUsuario u ++ "!\n"
-      return u
+      return (Just u)
     Nothing -> do
       putStrLn "\nUsuário ou senha incorretos, ou tipo de usuário inválido."
       putStrLn "Tente novamente.\n"

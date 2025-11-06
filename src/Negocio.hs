@@ -74,29 +74,29 @@ listarPassageiros :: Sistema -> [Passageiro]
 listarPassageiros = passageiros
 
 
--- | Insere um passageiro já estruturado (com nome e documento),
+-- | Insere um passageiro já estruturado (com nome e identificador),
 --   mas ignora o ID recebido e gera um novo ID automaticamente.
 inserirPassageiro :: Passageiro -> Sistema -> Either String Sistema
 inserirPassageiro p sys =
-  inserirPassageiroDados (nome p) (documento p) sys
+  inserirPassageiroDados (nome p) (identificador p) sys
 
 
--- | Insere um novo passageiro a partir de nome e documento.
---   Valida campos obrigatórios e impede duplicação de documentos.
+-- | Insere um novo passageiro a partir de nome e identificador.
+--   Valida campos obrigatórios e impede duplicação de identificadores.
 inserirPassageiroDados :: String -> String -> Sistema -> Either String Sistema
-inserirPassageiroDados nomeRaw docRaw sys =
+inserirPassageiroDados nomeRaw idRaw sys =
   let nome' = trim nomeRaw
-      doc'  = trim docRaw
+      id'   = trim idRaw
   in
     if null nome'
        then Left "Nome não pode ser vazio."
-    else if null doc'
-       then Left "Documento não pode ser vazio."
-    else if any (\x -> documento x == doc') (passageiros sys)
-       then Left "Já existe um passageiro com esse documento."
+    else if null id'
+       then Left "Identificador não pode ser vazio."
+    else if any (\x -> identificador x == id') (passageiros sys)
+       then Left "Já existe um passageiro com esse identificador."
     else
       let novoId = proximoId (passageiros sys) idPassageiro
-          novoP  = Passageiro novoId nome' doc'
+          novoP  = Passageiro novoId nome' id'
       in Right sys { passageiros = passageiros sys ++ [novoP] }
 
 
@@ -364,6 +364,7 @@ listarUsuarios = usuarios
 
 -- | Insere um novo usuario (para registro)
 -- Valida campos obrigatorios e impede duplicacao de email e nomeUsuario
+-- Se for UsuarioComum, cria automaticamente um passageiro vinculado
 inserirUsuario :: String -> String -> String -> Sistema -> Either String Sistema
 inserirUsuario nomeRaw emailRaw senhaRaw sys =
   let nome'  = trim nomeRaw
@@ -381,9 +382,14 @@ inserirUsuario nomeRaw emailRaw senhaRaw sys =
     else if any (\u -> nomeUsuario u == nome') (usuarios sys)
        then Left "Já existe um usuário com esse nome."
     else
-      let novoId = proximoId (usuarios sys) idUsuario
-          novoU  = Usuario novoId nome' email' senha' UsuarioComum
-      in Right sys { usuarios = usuarios sys ++ [novoU] }
+      let novoIdUsuario = proximoId (usuarios sys) idUsuario
+          novoU  = Usuario novoIdUsuario nome' email' senha' UsuarioComum
+          -- Criar automaticamente um passageiro para o usuário comum (email como identificador)
+          novoIdPassageiro = proximoId (passageiros sys) idPassageiro
+          novoP = Passageiro novoIdPassageiro nome' email'
+          sys' = sys { usuarios = usuarios sys ++ [novoU]
+                     , passageiros = passageiros sys ++ [novoP] }
+      in Right sys'
 
 -- | Busca um usuario pelo ID
 buscarUsuarioPorId :: Int -> Sistema -> Maybe Usuario

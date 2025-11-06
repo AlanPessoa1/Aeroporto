@@ -4,6 +4,8 @@ module Menus (menuPrincipal) where
 
 import Tipos
 import Negocio
+import Persistencia (salvarSistema)
+import System.IO (hFlush, stdout)
 import Relatorios
   ( imprimirRelatorioEstatisticasGerais
   , imprimirRelatorioPassageiros
@@ -41,6 +43,7 @@ menuAdmin usuario sys = do
   putStrLn "6) Usuarios"
   putStrLn "7) Sair"
   putStr "Escolha: "
+  hFlush stdout
   opc <- getLine
   case opc of
     "1" -> menuCompanhiasAdmin sys >>= menuPrincipal usuario
@@ -59,19 +62,18 @@ menuAdmin usuario sys = do
 menuUsuarioComum :: Usuario -> Sistema -> IO Sistema
 menuUsuarioComum usuario sys = do
   putStrLn ""
-  putStrLn "1) Meu Perfil"
-  putStrLn "2) Buscar Voos"
-  putStrLn "3) Minhas Reservas"
-  putStrLn "4) Configuracoes"
-  putStrLn "5) Sair"
+  putStrLn "1) Buscar Voos"
+  putStrLn "2) Minhas Reservas"
+  putStrLn "3) Configuracoes"
+  putStrLn "4) Sair"
   putStr "Escolha: "
+  hFlush stdout
   opc <- getLine
   case opc of
-    "1" -> menuPerfilUsuario usuario sys >>= menuPrincipal usuario
-    "2" -> menuBuscarVoosUsuario sys >> menuPrincipal usuario sys
-    "3" -> menuReservasUsuario usuario sys >>= menuPrincipal usuario
-    "4" -> menuConfiguracoesUsuario usuario sys >>= \(s, u) -> menuPrincipal u s
-    "5" -> putStrLn "Saindo..." >> pure sys
+    "1" -> menuBuscarVoosUsuario sys >> menuPrincipal usuario sys
+    "2" -> menuReservasUsuario usuario sys >>= menuPrincipal usuario
+    "3" -> menuConfiguracoesUsuario usuario sys >>= \(s, u) -> menuPrincipal u s
+    "4" -> putStrLn "Saindo..." >> pure sys
     _   -> putStrLn "Opcao invalida." >> menuPrincipal usuario sys
 
 -- ============================================================
@@ -88,6 +90,7 @@ menuCompanhiasAdmin sys = do
   putStrLn "4) Excluir"
   putStrLn "5) Voltar"
   putStr "Escolha: "
+  hFlush stdout
   opc <- getLine
   case opc of
     "1" -> acaoCadastrarCompanhia sys >>= menuCompanhiasAdmin
@@ -100,10 +103,14 @@ menuCompanhiasAdmin sys = do
 acaoCadastrarCompanhia :: Sistema -> IO Sistema
 acaoCadastrarCompanhia sys = do
   putStr "Nome da Companhia: "
+  hFlush stdout
   nome <- getLine
   case inserirCompanhiaNome nome sys of
     Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-    Right sys' -> putStrLn "[OK] Companhia cadastrada." >> pure sys'
+    Right sys' -> do
+      salvarSistema sys'
+      putStrLn "[OK] Companhia cadastrada."
+      pure sys'
 
 acaoListarCompanhias :: Sistema -> IO ()
 acaoListarCompanhias sys = do
@@ -116,25 +123,34 @@ acaoListarCompanhias sys = do
 acaoEditarCompanhia :: Sistema -> IO Sistema
 acaoEditarCompanhia sys = do
   putStr "ID da Companhia: "
+  hFlush stdout
   sId <- getLine
   case readIntSafe sId of
     Nothing -> putStrLn "[ERRO] ID invalido." >> pure sys
     Just cid -> do
       putStr "Novo Nome: "
+      hFlush stdout
       novoNome <- getLine
       case editarCompanhia cid novoNome sys of
         Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-        Right sys' -> putStrLn "[OK] Companhia editada." >> pure sys'
+        Right sys' -> do
+          salvarSistema sys'
+          putStrLn "[OK] Companhia editada."
+          pure sys'
 
 acaoExcluirCompanhia :: Sistema -> IO Sistema
 acaoExcluirCompanhia sys = do
   putStr "ID da Companhia: "
+  hFlush stdout
   sId <- getLine
   case readIntSafe sId of
     Nothing -> putStrLn "[ERRO] ID invalido." >> pure sys
     Just cid -> case excluirCompanhia cid sys of
         Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-        Right sys' -> putStrLn "[OK] Companhia excluida." >> pure sys'
+        Right sys' -> do
+          salvarSistema sys'
+          putStrLn "[OK] Companhia excluida."
+          pure sys'
 
 -- ============================================================
 --                    MENUS ADMIN - VOOS
@@ -151,6 +167,7 @@ menuVoosAdmin sys = do
   putStrLn "5) Excluir"
   putStrLn "6) Voltar"
   putStr "Escolha: "
+  hFlush stdout
   opc <- getLine
   case opc of
     "1" -> acaoCadastrarVoo sys >>= menuVoosAdmin
@@ -164,21 +181,29 @@ menuVoosAdmin sys = do
 acaoCadastrarVoo :: Sistema -> IO Sistema
 acaoCadastrarVoo sys = do
   putStr "Origem: "
+  hFlush stdout
   origemInput <- getLine
   putStr "Destino: "
+  hFlush stdout
   destinoInput <- getLine
   putStr "Horario (ex: 12:30): "
+  hFlush stdout
   horarioInput <- getLine
   putStr "ID da Companhia: "
+  hFlush stdout
   sCid <- getLine
   putStr "Capacidade (assentos): "
+  hFlush stdout
   sCap <- getLine
   case (readIntSafe sCid, readIntSafe sCap) of
     (Nothing, _) -> putStrLn "[ERRO] ID da companhia invalido." >> pure sys
     (_, Nothing) -> putStrLn "[ERRO] Capacidade invalida." >> pure sys
     (Just cid, Just cap) -> case inserirVooDados origemInput destinoInput horarioInput cid cap sys of
       Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-      Right sys' -> putStrLn "[OK] Voo cadastrado." >> pure sys'
+      Right sys' -> do
+        salvarSistema sys'
+        putStrLn "[OK] Voo cadastrado."
+        pure sys'
 
 acaoListarVoos :: Sistema -> IO ()
 acaoListarVoos sys = do
@@ -190,36 +215,54 @@ acaoListarVoos sys = do
 acaoEditarVoo :: Sistema -> IO Sistema
 acaoEditarVoo sys = do
   putStr "ID do Voo: "
+  hFlush stdout
   sId <- getLine
   case readIntSafe sId of
     Nothing -> putStrLn "[ERRO] ID invalido." >> pure sys
-    Just vid -> do
-      putStr "Nova Origem: "
-      origemInput <- getLine
-      putStr "Novo Destino: "
-      destinoInput <- getLine
-      putStr "Novo Horario: "
-      horarioInput <- getLine
-      putStr "Novo ID da Companhia: "
-      sCid <- getLine
-      putStr "Nova Capacidade: "
-      sCap <- getLine
-      case (readIntSafe sCid, readIntSafe sCap) of
-        (Nothing, _) -> putStrLn "[ERRO] ID da companhia invalido." >> pure sys
-        (_, Nothing) -> putStrLn "[ERRO] Capacidade invalida." >> pure sys
-        (Just cid, Just cap) -> case editarVoo vid origemInput destinoInput horarioInput cid cap sys of
-          Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-          Right sys' -> putStrLn "[OK] Voo editado." >> pure sys'
+    Just vid ->
+      case buscarVooPorId vid sys of
+        Nothing -> putStrLn "[ERRO] Voo nao encontrado." >> pure sys
+        Just vooAtual -> do
+          putStrLn $ "\nVoo atual: " ++ origem vooAtual ++ " -> " ++ destino vooAtual
+                  ++ " | " ++ horario vooAtual
+          putStrLn "(Deixe em branco para manter o valor atual)\n"
+
+          putStr "Nova Origem: "
+          hFlush stdout
+          origemInput <- getLine
+          let novaOrigem = if null (trim origemInput) then origem vooAtual else trim origemInput
+
+          putStr "Novo Destino: "
+          hFlush stdout
+          destinoInput <- getLine
+          let novoDestino = if null (trim destinoInput) then destino vooAtual else trim destinoInput
+
+          putStr "Novo Horario: "
+          hFlush stdout
+          horarioInput <- getLine
+          let novoHorario = if null (trim horarioInput) then horario vooAtual else trim horarioInput
+
+          -- Mantém companhia e capacidade originais
+          case editarVoo vid novaOrigem novoDestino novoHorario (idComp vooAtual) (capacidade vooAtual) sys of
+            Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+            Right sys' -> do
+              salvarSistema sys'
+              putStrLn "[OK] Voo editado."
+              pure sys'
 
 acaoExcluirVoo :: Sistema -> IO Sistema
 acaoExcluirVoo sys = do
   putStr "ID do Voo: "
+  hFlush stdout
   sId <- getLine
   case readIntSafe sId of
     Nothing -> putStrLn "[ERRO] ID invalido." >> pure sys
     Just vid -> case excluirVoo vid sys of
       Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-      Right sys' -> putStrLn "[OK] Voo excluido." >> pure sys'
+      Right sys' -> do
+        salvarSistema sys'
+        putStrLn "[OK] Voo excluido."
+        pure sys'
 
 printVoo :: Sistema -> Voo -> IO ()
 printVoo sys v = do
@@ -237,25 +280,59 @@ menuBuscaVoos :: Sistema -> IO ()
 menuBuscaVoos sys = do
   putStrLn ""
   putStrLn "---- Buscar Voos ----"
-  putStrLn "1) Por Origem"
-  putStrLn "2) Por Destino"
-  putStrLn "3) Por Rota"
-  putStrLn "4) Voltar"
+  putStrLn "1) Listar Todos os Voos"
+  putStrLn "2) Por Origem (de onde sai)"
+  putStrLn "3) Por Destino (para onde vai)"
+  putStrLn "4) Por Rota (origem E destino específicos)"
+  putStrLn "5) Voltar"
   putStr "Escolha: "
+  hFlush stdout
   opc <- getLine
   case opc of
-    "1" -> putStr "Origem: " >> getLine >>= \o ->
-             mapM_ (printVoo sys) (buscarVoosPorOrigem o sys) >> menuBuscaVoos sys
-    "2" -> putStr "Destino: " >> getLine >>= \d ->
-             mapM_ (printVoo sys) (buscarVoosPorDestino d sys) >> menuBuscaVoos sys
+    "1" -> do
+      putStrLn ""
+      let vs = listarVoos sys
+      if null vs
+        then putStrLn "(Nenhum voo disponível)"
+        else mapM_ (printVoo sys) vs
+      menuBuscaVoos sys
+    "2" -> do
+      putStrLn ""
+      putStr "Origem: "
+      hFlush stdout
+      o <- getLine
+      putStrLn ""
+      let vs = buscarVoosPorOrigem o sys
+      if null vs
+        then putStrLn "(Nenhum voo encontrado)"
+        else mapM_ (printVoo sys) vs
+      menuBuscaVoos sys
     "3" -> do
-             putStr "Origem: "
-             o <- getLine
-             putStr "Destino: "
-             d <- getLine
-             mapM_ (printVoo sys) (buscarVoosPorRota o d sys)
-             menuBuscaVoos sys
-    "4" -> pure ()
+      putStrLn ""
+      putStr "Destino: "
+      hFlush stdout
+      d <- getLine
+      putStrLn ""
+      let vs = buscarVoosPorDestino d sys
+      if null vs
+        then putStrLn "(Nenhum voo encontrado)"
+        else mapM_ (printVoo sys) vs
+      menuBuscaVoos sys
+    "4" -> do
+      putStrLn ""
+      putStr "Origem: "
+      hFlush stdout
+      o <- getLine
+      putStr "Destino: "
+      hFlush stdout
+      d <- getLine
+      putStrLn ""
+      let vs = buscarVoosPorRota o d sys
+      if null vs
+        then putStrLn "(Nenhum voo encontrado)"
+        else mapM_ (printVoo sys) vs
+      menuBuscaVoos sys
+    "5" -> pure ()
     _   -> putStrLn "Opcao invalida." >> menuBuscaVoos sys
 
 -- ============================================================
@@ -282,7 +359,7 @@ acaoListarPassageiros sys = do
      then putStrLn "(vazio)"
      else mapM_ (\p -> putStrLn $ "- ID " ++ show (idPassageiro p)
                                ++ " | Nome: " ++ nome p
-                               ++ " | Doc: "  ++ documento p) ps
+                               ++ " | ID: "  ++ identificador p) ps
 
 -- ============================================================
 --                 MENUS ADMIN - RESERVAS
@@ -317,23 +394,31 @@ acaoListarReservas sys = do
 acaoConfirmarReserva :: Sistema -> IO Sistema
 acaoConfirmarReserva sys = do
   putStr "ID da Reserva: "
+  hFlush stdout
   sRid <- getLine
   case readIntSafe sRid of
     Just rid ->
       case confirmarReserva rid sys of
         Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-        Right sys' -> putStrLn "[OK] Reserva confirmada." >> pure sys'
+        Right sys' -> do
+          salvarSistema sys'
+          putStrLn "[OK] Reserva confirmada."
+          pure sys'
     _ -> putStrLn "[ERRO] ID invalido." >> pure sys
 
 acaoCancelarReserva :: Sistema -> IO Sistema
 acaoCancelarReserva sys = do
   putStr "ID da Reserva: "
+  hFlush stdout
   sRid <- getLine
   case readIntSafe sRid of
     Just rid ->
       case cancelarReserva rid sys of
         Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-        Right sys' -> putStrLn "[OK] Reserva cancelada." >> pure sys'
+        Right sys' -> do
+          salvarSistema sys'
+          putStrLn "[OK] Reserva cancelada."
+          pure sys'
     _ -> putStrLn "[ERRO] ID invalido." >> pure sys
 
 menuListarReservasPorStatus :: Sistema -> IO ()
@@ -435,10 +520,13 @@ acaoListarUsuarios sys = do
 acaoCadastrarAdmin :: Sistema -> IO Sistema
 acaoCadastrarAdmin sys = do
   putStr "Nome do Admin: "
+  hFlush stdout
   nomeInput <- getLine
   putStr "Email do Admin: "
+  hFlush stdout
   emailInput <- getLine
   putStr "Senha do Admin: "
+  hFlush stdout
   senhaInput <- getLine
 
   let nomeT = trim nomeInput
@@ -454,58 +542,25 @@ acaoCadastrarAdmin sys = do
         else
           let novoId = proximoId (usuarios sys) idUsuario
               novoAdmin = Usuario novoId nomeT emailT senhaT Administrador
+              sys' = sys { usuarios = usuarios sys ++ [novoAdmin] }
           in do
+            salvarSistema sys'
             putStrLn "[OK] Administrador cadastrado."
-            pure sys { usuarios = usuarios sys ++ [novoAdmin] }
+            pure sys'
 
 acaoExcluirUsuario :: Sistema -> IO Sistema
 acaoExcluirUsuario sys = do
   putStr "ID do Usuario: "
+  hFlush stdout
   sId <- getLine
   case readIntSafe sId of
     Nothing -> putStrLn "[ERRO] ID invalido." >> pure sys
     Just uid -> case excluirUsuario uid sys of
       Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-      Right sys' -> putStrLn "[OK] Usuario excluido." >> pure sys'
-
--- ============================================================
---              MENUS USUARIO COMUM - PERFIL
--- ============================================================
-
-menuPerfilUsuario :: Usuario -> Sistema -> IO Sistema
-menuPerfilUsuario usuario sys = do
-  putStrLn ""
-  putStrLn "---- Meu Perfil ----"
-  putStrLn "1) Cadastrar meu Passageiro"
-  putStrLn "2) Ver meu Passageiro"
-  putStrLn "3) Voltar"
-  putStr "Escolha: "
-  opc <- getLine
-  case opc of
-    "1" -> acaoCadastrarMeuPassageiro sys >>= menuPerfilUsuario usuario
-    "2" -> acaoVerMeuPassageiro sys >> menuPerfilUsuario usuario sys
-    "3" -> pure sys
-    _   -> putStrLn "Opcao invalida." >> menuPerfilUsuario usuario sys
-
-acaoCadastrarMeuPassageiro :: Sistema -> IO Sistema
-acaoCadastrarMeuPassageiro sys = do
-  putStr "Nome: "
-  nomeInput <- getLine
-  putStr "Documento: "
-  docInput <- getLine
-  case inserirPassageiroDados nomeInput docInput sys of
-    Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-    Right sys' -> putStrLn "[OK] Passageiro cadastrado." >> pure sys'
-
-acaoVerMeuPassageiro :: Sistema -> IO ()
-acaoVerMeuPassageiro sys = do
-  putStr "ID do seu Passageiro: "
-  sId <- getLine
-  case readIntSafe sId of
-    Nothing -> putStrLn "[ERRO] ID invalido."
-    Just pid -> case buscarPassageiroPorId pid sys of
-      Nothing -> putStrLn "[ERRO] Passageiro nao encontrado."
-      Just p -> putStrLn $ "Nome: " ++ nome p ++ " | Doc: " ++ documento p
+      Right sys' -> do
+        salvarSistema sys'
+        putStrLn "[OK] Usuario excluido."
+        pure sys'
 
 -- ============================================================
 --           MENUS USUARIO COMUM - BUSCAR VOOS
@@ -527,49 +582,79 @@ menuReservasUsuario usuario sys = do
   putStrLn "3) Cancelar Reserva"
   putStrLn "4) Voltar"
   putStr "Escolha: "
+  hFlush stdout
   opc <- getLine
   case opc of
-    "1" -> acaoCriarReservaUsuario sys >>= menuReservasUsuario usuario
-    "2" -> acaoListarMinhasReservas sys >> menuReservasUsuario usuario sys
-    "3" -> acaoCancelarMinhaReserva sys >>= menuReservasUsuario usuario
+    "1" -> acaoCriarReservaUsuario usuario sys >>= menuReservasUsuario usuario
+    "2" -> acaoListarMinhasReservas usuario sys >> menuReservasUsuario usuario sys
+    "3" -> acaoCancelarMinhaReserva usuario sys >>= menuReservasUsuario usuario
     "4" -> pure sys
     _   -> putStrLn "Opcao invalida." >> menuReservasUsuario usuario sys
 
-acaoCriarReservaUsuario :: Sistema -> IO Sistema
-acaoCriarReservaUsuario sys = do
-  putStr "ID do seu Passageiro: "
-  sPid <- getLine
-  putStr "ID do Voo: "
-  sVid <- getLine
-  case (readIntSafe sPid, readIntSafe sVid) of
-    (Just pid, Just vid) ->
-      case criarReserva pid vid sys of
-        Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-        Right sys' -> do
-          putStrLn "[OK] Reserva criada e confirmada automaticamente."
-          pure sys'
-    _ -> putStrLn "[ERRO] IDs invalidos." >> pure sys
+acaoCriarReservaUsuario :: Usuario -> Sistema -> IO Sistema
+acaoCriarReservaUsuario usuario sys = do
+  -- Buscar o passageiro pelo email do usuario
+  let meuPassageiro = filter (\p -> identificador p == emailUsuario usuario) (passageiros sys)
+  case meuPassageiro of
+    [] -> do
+      putStrLn "[ERRO] Você não tem um passageiro cadastrado no sistema."
+      pure sys
+    (p:_) -> do
+      putStr "ID do Voo: "
+      hFlush stdout
+      sVid <- getLine
+      case readIntSafe sVid of
+        Nothing -> putStrLn "[ERRO] ID invalido." >> pure sys
+        Just vid ->
+          case criarReserva (idPassageiro p) vid sys of
+            Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+            Right sys' -> do
+              salvarSistema sys'
+              putStrLn "[OK] Reserva criada e confirmada automaticamente."
+              pure sys'
 
-acaoListarMinhasReservas :: Sistema -> IO ()
-acaoListarMinhasReservas sys = do
-  putStr "ID do seu Passageiro: "
-  sPid <- getLine
-  case readIntSafe sPid of
-    Just pid -> do
-      let rs = listarReservasPorPassageiro pid sys
+acaoListarMinhasReservas :: Usuario -> Sistema -> IO ()
+acaoListarMinhasReservas usuario sys = do
+  -- Buscar o passageiro pelo email do usuario
+  let meuPassageiro = filter (\p -> identificador p == emailUsuario usuario) (passageiros sys)
+  case meuPassageiro of
+    [] -> putStrLn "[INFO] Você ainda não tem um passageiro cadastrado no sistema."
+    (p:_) -> do
+      let rs = listarReservasPorPassageiro (idPassageiro p) sys
       if null rs then putStrLn "(vazio)" else mapM_ (printReserva sys) rs
-    _ -> putStrLn "[ERRO] ID invalido."
 
-acaoCancelarMinhaReserva :: Sistema -> IO Sistema
-acaoCancelarMinhaReserva sys = do
-  putStr "ID da Reserva: "
-  sRid <- getLine
-  case readIntSafe sRid of
-    Just rid ->
-      case cancelarReserva rid sys of
-        Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
-        Right sys' -> putStrLn "[OK] Reserva cancelada." >> pure sys'
-    _ -> putStrLn "[ERRO] ID invalido." >> pure sys
+acaoCancelarMinhaReserva :: Usuario -> Sistema -> IO Sistema
+acaoCancelarMinhaReserva usuario sys = do
+  -- Buscar o passageiro pelo email do usuario
+  let meuPassageiro = filter (\p -> identificador p == emailUsuario usuario) (passageiros sys)
+  case meuPassageiro of
+    [] -> do
+      putStrLn "[ERRO] Você não tem um passageiro cadastrado."
+      pure sys
+    (p:_) -> do
+      putStr "ID da Reserva: "
+      hFlush stdout
+      sRid <- getLine
+      case readIntSafe sRid of
+        Nothing -> putStrLn "[ERRO] ID invalido." >> pure sys
+        Just rid -> do
+          -- Verificar se a reserva pertence ao passageiro do usuario
+          case filter (\r -> idReserva r == rid) (reservas sys) of
+            [] -> do
+              putStrLn "[ERRO] Reserva não encontrada."
+              pure sys
+            (r:_) ->
+              if idPass r /= idPassageiro p
+                then do
+                  putStrLn "[ERRO] Esta reserva não pertence a você."
+                  pure sys
+                else
+                  case cancelarReserva rid sys of
+                    Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
+                    Right sys' -> do
+                      salvarSistema sys'
+                      putStrLn "[OK] Reserva cancelada."
+                      pure sys'
 
 -- ============================================================
 --         MENUS USUARIO COMUM - CONFIGURACOES
@@ -597,52 +682,74 @@ menuConfiguracoesUsuario usuario sys = do
 acaoEditarNome :: Usuario -> Sistema -> IO (Sistema, Usuario)
 acaoEditarNome usuario sys = do
   putStr "Novo Nome: "
+  hFlush stdout
   novoNome <- getLine
   case editarUsuario (idUsuario usuario) novoNome (emailUsuario usuario) (senhaUsuario usuario) sys of
     Left err -> putStrLn ("[ERRO] " ++ err) >> pure (sys, usuario)
     Right sys' -> do
       let usuarioAtualizado = usuario { nomeUsuario = trim novoNome }
+      salvarSistema sys'
       putStrLn "[OK] Nome atualizado."
       pure (sys', usuarioAtualizado)
 
 acaoEditarEmail :: Usuario -> Sistema -> IO (Sistema, Usuario)
 acaoEditarEmail usuario sys = do
   putStr "Novo Email: "
+  hFlush stdout
   novoEmail <- getLine
   case editarUsuario (idUsuario usuario) (nomeUsuario usuario) novoEmail (senhaUsuario usuario) sys of
     Left err -> putStrLn ("[ERRO] " ++ err) >> pure (sys, usuario)
     Right sys' -> do
-      let usuarioAtualizado = usuario { emailUsuario = trim novoEmail }
-      putStrLn "[OK] Email atualizado."
-      pure (sys', usuarioAtualizado)
+      -- Atualizar também o identificador do passageiro vinculado
+      let emailAntigo = emailUsuario usuario
+          passageirosAtualizados = map (\p -> if identificador p == emailAntigo
+                                                 then p { identificador = trim novoEmail }
+                                                 else p) (passageiros sys')
+          sys'' = sys' { passageiros = passageirosAtualizados }
+          usuarioAtualizado = usuario { emailUsuario = trim novoEmail }
+      salvarSistema sys''
+      putStrLn "[OK] Email atualizado (usuario e passageiro)."
+      pure (sys'', usuarioAtualizado)
 
 acaoEditarSenha :: Usuario -> Sistema -> IO (Sistema, Usuario)
 acaoEditarSenha usuario sys = do
   putStr "Nova Senha: "
+  hFlush stdout
   novaSenha <- getLine
   case editarUsuario (idUsuario usuario) (nomeUsuario usuario) (emailUsuario usuario) novaSenha sys of
     Left err -> putStrLn ("[ERRO] " ++ err) >> pure (sys, usuario)
     Right sys' -> do
       let usuarioAtualizado = usuario { senhaUsuario = trim novaSenha }
+      salvarSistema sys'
       putStrLn "[OK] Senha atualizada."
       pure (sys', usuarioAtualizado)
 
 acaoEditarTudo :: Usuario -> Sistema -> IO (Sistema, Usuario)
 acaoEditarTudo usuario sys = do
   putStr "Novo Nome: "
+  hFlush stdout
   novoNome <- getLine
   putStr "Novo Email: "
+  hFlush stdout
   novoEmail <- getLine
   putStr "Nova Senha: "
+  hFlush stdout
   novaSenha <- getLine
   case editarUsuario (idUsuario usuario) novoNome novoEmail novaSenha sys of
     Left err -> putStrLn ("[ERRO] " ++ err) >> pure (sys, usuario)
     Right sys' -> do
-      let usuarioAtualizado = usuario { nomeUsuario = trim novoNome
+      -- Atualizar também o identificador do passageiro vinculado
+      let emailAntigo = emailUsuario usuario
+          passageirosAtualizados = map (\p -> if identificador p == emailAntigo
+                                                 then p { identificador = trim novoEmail }
+                                                 else p) (passageiros sys')
+          sys'' = sys' { passageiros = passageirosAtualizados }
+          usuarioAtualizado = usuario { nomeUsuario = trim novoNome
                                        , emailUsuario = trim novoEmail
                                        , senhaUsuario = trim novaSenha }
-      putStrLn "[OK] Dados atualizados."
-      pure (sys', usuarioAtualizado)
+      salvarSistema sys''
+      putStrLn "[OK] Dados atualizados (usuario e passageiro)."
+      pure (sys'', usuarioAtualizado)
 
 -- ============================================================
 --                    UTILITARIOS
