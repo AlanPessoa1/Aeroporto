@@ -370,18 +370,16 @@ menuReservasAdmin sys = do
   putStrLn ""
   putStrLn "---- Reservas (Admin) ----"
   putStrLn "1) Listar Todas"
-  putStrLn "2) Confirmar Reserva"
-  putStrLn "3) Cancelar Reserva"
-  putStrLn "4) Listar por Status"
-  putStrLn "5) Voltar"
+  putStrLn "2) Cancelar Reserva"
+  putStrLn "3) Listar por Status"
+  putStrLn "4) Voltar"
   putStr "Escolha: "
   opc <- getLine
   case opc of
     "1" -> acaoListarReservas sys >> menuReservasAdmin sys
-    "2" -> acaoConfirmarReserva sys >>= menuReservasAdmin
-    "3" -> acaoCancelarReserva sys >>= menuReservasAdmin
-    "4" -> menuListarReservasPorStatus sys >> menuReservasAdmin sys
-    "5" -> pure sys
+    "2" -> acaoCancelarReserva sys >>= menuReservasAdmin
+    "3" -> menuListarReservasPorStatus sys >> menuReservasAdmin sys
+    "4" -> pure sys
     _   -> putStrLn "Opcao invalida." >> menuReservasAdmin sys
 
 acaoListarReservas :: Sistema -> IO ()
@@ -425,17 +423,15 @@ menuListarReservasPorStatus :: Sistema -> IO ()
 menuListarReservasPorStatus sys = do
   putStrLn ""
   putStrLn "---- Listar por Status ----"
-  putStrLn "1) Pendentes"
-  putStrLn "2) Confirmadas"
-  putStrLn "3) Canceladas"
-  putStrLn "4) Voltar"
+  putStrLn "1) Confirmadas"
+  putStrLn "2) Canceladas"
+  putStrLn "3) Voltar"
   putStr "Escolha: "
   opc <- getLine
   case opc of
-    "1" -> acaoListarReservasPorStatus Pendente sys >> menuListarReservasPorStatus sys
-    "2" -> acaoListarReservasPorStatus Confirmada sys >> menuListarReservasPorStatus sys
-    "3" -> acaoListarReservasPorStatus Cancelada sys >> menuListarReservasPorStatus sys
-    "4" -> pure ()
+    "1" -> acaoListarReservasPorStatus Confirmada sys >> menuListarReservasPorStatus sys
+    "2" -> acaoListarReservasPorStatus Cancelada sys >> menuListarReservasPorStatus sys
+    "3" -> pure ()
     _   -> putStrLn "Opcao invalida." >> menuListarReservasPorStatus sys
 
 acaoListarReservasPorStatus :: StatusReserva -> Sistema -> IO ()
@@ -610,7 +606,7 @@ acaoCriarReservaUsuario usuario sys = do
             Left err   -> putStrLn ("[ERRO] " ++ err) >> pure sys
             Right sys' -> do
               salvarSistema sys'
-              putStrLn "[OK] Reserva criada e confirmada automaticamente."
+              putStrLn "[OK] Reserva criada com sucesso! Status: Confirmada"
               pure sys'
 
 acaoListarMinhasReservas :: Usuario -> Sistema -> IO ()
